@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, MapPin, Loader2, CheckCircle2 } from "lucide-react";
 import {
   useCreateVisit,
   getListVisitsQueryKey,
@@ -12,21 +12,42 @@ import {
 import { COUNTRIES } from "@/lib/countries";
 import { useToast } from "@/hooks/use-toast";
 
-type GeoStatus = "idle" | "loading" | "city" | "country" | "failed";
+interface CitySuggestion {
+  displayName: string;
+  city: string;
+  lat: number;
+  lng: number;
+}
 
-async function geocodeCity(city: string, country: string): Promise<{ lat: number; lng: number } | null> {
+async function searchCities(query: string, country: string): Promise<CitySuggestion[]> {
+  if (!query.trim()) return [];
   try {
-    const q = encodeURIComponent(`${city}, ${country}`);
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&addressdetails=0`,
-      { headers: { "Accept-Language": "en" } }
-    );
-    const data = await res.json();
-    if (Array.isArray(data) && data.length > 0) {
-      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-    }
-  } catch {}
-  return null;
+    const q = encodeURIComponent(query);
+    const c = encodeURIComponent(country);
+    const url = `https://nominatim.openstreetmap.org/search?q=${q}&countrycodes=${c}&format=json&limit=6&addressdetails=1&featuretype=city`;
+    const res = await fetch(url, { headers: { "Accept-Language": "en" } });
+    const data: Array<{
+      display_name: string;
+      lat: string;
+      lon: string;
+      address: { city?: string; town?: string; village?: string; county?: string; state?: string; country?: string };
+    }> = await res.json();
+
+    return data
+      .filter((d) => d.address.city || d.address.town || d.address.village)
+      .map((d) => {
+        const cityName = d.address.city ?? d.address.town ?? d.address.village ?? query;
+        const region = d.address.state ?? d.address.county ?? "";
+        return {
+          displayName: region ? `${cityName}, ${region}` : cityName,
+          city: cityName,
+          lat: parseFloat(d.lat),
+          lng: parseFloat(d.lon),
+        };
+      });
+  } catch {
+    return [];
+  }
 }
 
 export default function NewVisit() {
@@ -51,10 +72,16 @@ export default function NewVisit() {
   });
 
   const [countrySearch, setCountrySearch] = useState(preCountry);
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [countryLocked] = useState(!!preCountry);
-  const [geoStatus, setGeoStatus] = useState<GeoStatus>("idle");
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // City autocomplete
+  const [cityInput, setCityInput] = useState("");
+  const [citySuggestions, setCitySuggestions] = useState<CitySuggestion[]>([]);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const [cityPinned, setCityPinned] = useState(false);
+  const [citySearching, setCitySearching] = useState(false);
+  const cityDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const filteredCountries =
     countrySearch.length > 0 && !countryLocked
@@ -63,42 +90,70 @@ export default function NewVisit() {
         ).slice(0, 10)
       : [];
 
-  // When country changes without a city yet, pre-fill country centroid
+  // When country selected and no city yet, fill country centroid as temp coords
   useEffect(() => {
     if (countryLocked) return;
     const selected = COUNTRIES.find((c) => c.name === form.country);
-    if (selected && !form.city) {
+    if (selected && !cityPinned) {
       setForm((f) => ({ ...f, lat: String(selected.lat), lng: String(selected.lng) }));
-      setGeoStatus("country");
     }
-  }, [form.country, countryLocked]);
+  }, [form.country, countryLocked, cityPinned]);
 
-  // Geocode city whenever city or country changes (debounced)
+  // Search cities whenever cityInput or country changes
   useEffect(() => {
-    if (!form.city.trim() || !form.country) return;
+    if (!form.country) return;
+    if (!cityInput.trim()) {
+      setCitySuggestions([]);
+      setShowCityDropdown(false);
+      return;
+    }
+    if (cityDebounceRef.current) clearTimeout(cityDebounceRef.current);
+    setCitySearching(true);
 
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    setGeoStatus("loading");
+    // Use country code for the search if available
+    const countryEntry = COUNTRIES.find((c) => c.name === form.country);
+    const countryCode = countryEntry?.code?.toLowerCase() ?? "";
 
-    debounceRef.current = setTimeout(async () => {
-      const result = await geocodeCity(form.city.trim(), form.country);
-      if (result) {
-        setForm((f) => ({ ...f, lat: String(result.lat), lng: String(result.lng) }));
-        setGeoStatus("city");
-      } else {
-        // Fall back to country centroid
-        const countryData = COUNTRIES.find((c) => c.name === form.country);
-        if (countryData) {
-          setForm((f) => ({ ...f, lat: String(countryData.lat), lng: String(countryData.lng) }));
-        }
-        setGeoStatus("failed");
-      }
-    }, 600);
+    cityDebounceRef.current = setTimeout(async () => {
+      const results = await searchCities(cityInput, countryCode || form.country);
+      setCitySuggestions(results);
+      setShowCityDropdown(results.length > 0);
+      setCitySearching(false);
+    }, 400);
 
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (cityDebounceRef.current) clearTimeout(cityDebounceRef.current);
     };
-  }, [form.city, form.country]);
+  }, [cityInput, form.country]);
+
+  const handleCountrySelect = (name: string, code: string, lat: number, lng: number) => {
+    setForm((f) => ({ ...f, country: name, countryCode: code, lat: String(lat), lng: String(lng) }));
+    setCountrySearch(name);
+    setShowCountryDropdown(false);
+    setCityInput("");
+    setCityPinned(false);
+    setCitySuggestions([]);
+  };
+
+  const handleCitySelect = (suggestion: CitySuggestion) => {
+    setForm((f) => ({
+      ...f,
+      city: suggestion.city,
+      lat: String(suggestion.lat),
+      lng: String(suggestion.lng),
+    }));
+    setCityInput(suggestion.displayName);
+    setCityPinned(true);
+    setShowCityDropdown(false);
+    setCitySuggestions([]);
+  };
+
+  const handleCityInputChange = (value: string) => {
+    setCityInput(value);
+    setCityPinned(false);
+    setForm((f) => ({ ...f, city: value }));
+    setShowCityDropdown(false);
+  };
 
   const mutation = useCreateVisit({
     mutation: {
@@ -113,13 +168,6 @@ export default function NewVisit() {
       onError: () => toast({ title: "Failed to save visit", variant: "destructive" }),
     },
   });
-
-  const handleCountrySelect = (name: string, code: string, lat: number, lng: number) => {
-    setForm((f) => ({ ...f, country: name, countryCode: code, lat: String(lat), lng: String(lng) }));
-    setCountrySearch(name);
-    setShowDropdown(false);
-    setGeoStatus("country");
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,34 +189,6 @@ export default function NewVisit() {
   };
 
   const backHref = preCountry ? "/countries" : "/visits";
-
-  const geoHint = {
-    idle: null,
-    loading: (
-      <span className="flex items-center gap-1 text-muted-foreground">
-        <Loader2 className="w-3 h-3 animate-spin" />
-        Finding city coordinates…
-      </span>
-    ),
-    city: (
-      <span className="flex items-center gap-1 text-emerald-600">
-        <CheckCircle2 className="w-3 h-3" />
-        Pinned to {form.city}
-      </span>
-    ),
-    country: (
-      <span className="flex items-center gap-1 text-amber-600">
-        <MapPin className="w-3 h-3" />
-        Using country center — type a city to pin it precisely
-      </span>
-    ),
-    failed: (
-      <span className="flex items-center gap-1 text-amber-600">
-        <AlertCircle className="w-3 h-3" />
-        City not found — using country center. You can adjust manually.
-      </span>
-    ),
-  }[geoStatus];
 
   return (
     <div className="max-w-xl mx-auto px-6 py-8">
@@ -209,18 +229,19 @@ export default function NewVisit() {
               value={countrySearch}
               onChange={(e) => {
                 setCountrySearch(e.target.value);
-                setShowDropdown(true);
+                setShowCountryDropdown(true);
                 setForm((f) => ({ ...f, country: "", countryCode: "" }));
-                setGeoStatus("idle");
+                setCityInput("");
+                setCityPinned(false);
               }}
-              onFocus={() => setShowDropdown(true)}
-              onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+              onFocus={() => setShowCountryDropdown(true)}
+              onBlur={() => setTimeout(() => setShowCountryDropdown(false), 150)}
               placeholder="Search countries..."
               className="w-full border border-border rounded-md px-3 py-2.5 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-ring"
               autoComplete="off"
             />
-            {showDropdown && filteredCountries.length > 0 && (
-              <div className="absolute z-10 w-full bg-popover border border-popover-border rounded-md shadow-lg mt-1 overflow-hidden">
+            {showCountryDropdown && filteredCountries.length > 0 && (
+              <div className="absolute z-20 w-full bg-popover border border-popover-border rounded-md shadow-lg mt-1 overflow-hidden">
                 {filteredCountries.map((c) => (
                   <button
                     key={c.code}
@@ -237,19 +258,62 @@ export default function NewVisit() {
           </div>
         )}
 
-        {/* City */}
-        <div>
+        {/* City — autocomplete with Nominatim suggestions */}
+        <div className="relative">
           <label className="block text-sm font-medium mb-1.5">
             City <span className="text-destructive">*</span>
           </label>
-          <input
-            type="text"
-            value={form.city}
-            onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-            placeholder="e.g. Tokyo"
-            autoFocus={countryLocked}
-            className="w-full border border-border rounded-md px-3 py-2.5 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-ring"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              value={cityInput}
+              onChange={(e) => handleCityInputChange(e.target.value)}
+              onFocus={() => { if (citySuggestions.length > 0) setShowCityDropdown(true); }}
+              onBlur={() => setTimeout(() => setShowCityDropdown(false), 150)}
+              placeholder={form.country ? `Search cities in ${form.country}…` : "Select a country first"}
+              disabled={!form.country}
+              autoFocus={countryLocked}
+              className="w-full border border-border rounded-md px-3 py-2.5 pr-9 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
+              autoComplete="off"
+            />
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+              {citySearching ? (
+                <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+              ) : cityPinned ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              ) : cityInput ? (
+                <MapPin className="w-4 h-4 text-muted-foreground/50" />
+              ) : null}
+            </div>
+          </div>
+
+          {showCityDropdown && citySuggestions.length > 0 && (
+            <div className="absolute z-20 w-full bg-popover border border-popover-border rounded-md shadow-lg mt-1 overflow-hidden">
+              {citySuggestions.map((s, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onMouseDown={() => handleCitySelect(s)}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors flex items-center gap-2"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                  <span>{s.displayName}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {cityPinned && (
+            <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" />
+              Pinned to exact location
+            </p>
+          )}
+          {!cityPinned && cityInput && !citySearching && citySuggestions.length === 0 && form.country && (
+            <p className="text-xs text-muted-foreground mt-1">
+              No suggestions — coordinates will use country center. You can adjust below.
+            </p>
+          )}
         </div>
 
         {/* Visit Date */}
@@ -265,7 +329,7 @@ export default function NewVisit() {
           />
         </div>
 
-        {/* Lat/Lng */}
+        {/* Lat/Lng — shown for manual override */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium mb-1.5">Latitude</label>
@@ -273,7 +337,7 @@ export default function NewVisit() {
               type="number"
               step="any"
               value={form.lat}
-              onChange={(e) => { setForm((f) => ({ ...f, lat: e.target.value })); setGeoStatus("idle"); }}
+              onChange={(e) => { setForm((f) => ({ ...f, lat: e.target.value })); setCityPinned(false); }}
               placeholder="e.g. 35.67"
               className="w-full border border-border rounded-md px-3 py-2.5 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-ring"
             />
@@ -284,13 +348,12 @@ export default function NewVisit() {
               type="number"
               step="any"
               value={form.lng}
-              onChange={(e) => { setForm((f) => ({ ...f, lng: e.target.value })); setGeoStatus("idle"); }}
+              onChange={(e) => { setForm((f) => ({ ...f, lng: e.target.value })); setCityPinned(false); }}
               placeholder="e.g. 139.65"
               className="w-full border border-border rounded-md px-3 py-2.5 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
         </div>
-        {geoHint && <p className="text-xs -mt-3">{geoHint}</p>}
 
         {/* Notes */}
         <div>
@@ -306,10 +369,10 @@ export default function NewVisit() {
 
         <button
           type="submit"
-          disabled={mutation.isPending || geoStatus === "loading"}
+          disabled={mutation.isPending || citySearching}
           className="w-full py-3 rounded-md bg-primary text-primary-foreground font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-60"
         >
-          {mutation.isPending ? "Saving..." : geoStatus === "loading" ? "Locating city…" : "Save visit"}
+          {mutation.isPending ? "Saving..." : citySearching ? "Locating city…" : "Save visit"}
         </button>
       </form>
     </div>
