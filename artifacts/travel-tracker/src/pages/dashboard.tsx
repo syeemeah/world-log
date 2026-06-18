@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { Link } from "wouter";
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Popup, Tooltip, useMap } from "react-leaflet";
 import { PlusCircle, Globe, Map, Layers, Plane } from "lucide-react";
 import { useListVisits, useGetOverview, getGetOverviewQueryKey } from "@workspace/api-client-react";
 
@@ -106,6 +106,16 @@ export default function Dashboard() {
                   weight: 2,
                 }}
               >
+                <Tooltip
+                  permanent
+                  direction="right"
+                  offset={[10, 0]}
+                  opacity={1}
+                  className="map-label"
+                >
+                  <span className="map-label-city">{visit.city}</span>
+                  <span className="map-label-country">{visit.country}</span>
+                </Tooltip>
                 <Popup>
                   <div className="min-w-[140px]">
                     <p className="font-semibold text-sm">{visit.city}</p>
