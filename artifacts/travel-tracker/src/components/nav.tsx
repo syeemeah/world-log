@@ -1,11 +1,12 @@
 import { Link, useLocation } from "wouter";
-import { Globe, Clock, Map, PlusCircle, BarChart2 } from "lucide-react";
+import { Globe, Clock, Map, PlusCircle, BarChart2, FlagTriangleRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/", label: "World Map", icon: Globe },
   { href: "/timeline", label: "Timeline", icon: Clock },
   { href: "/visits", label: "All Visits", icon: Map },
+  { href: "/countries", label: "Countries", icon: FlagTriangleRight },
   { href: "/stats", label: "By Year", icon: BarChart2 },
 ];
 

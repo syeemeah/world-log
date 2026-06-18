@@ -9,6 +9,7 @@ import Visits from "@/pages/visits";
 import NewVisit from "@/pages/new-visit";
 import EditVisit from "@/pages/edit-visit";
 import Stats from "@/pages/stats";
+import Countries from "@/pages/countries";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -27,6 +28,7 @@ function Router() {
           <Route path="/visits/new" component={NewVisit} />
           <Route path="/visits/:id/edit" component={EditVisit} />
           <Route path="/stats" component={Stats} />
+          <Route path="/countries" component={Countries} />
           <Route component={NotFound} />
         </Switch>
       </main>

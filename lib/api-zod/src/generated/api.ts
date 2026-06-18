@@ -153,6 +153,71 @@ export const GetYearStatsResponse = zod.array(GetYearStatsResponseItem)
 
 
 /**
+ * @summary List all country memories
+ */
+export const ListMemoriesResponseItem = zod.object({
+  "id": zod.number(),
+  "countryCode": zod.string(),
+  "country": zod.string(),
+  "bestMemory": zod.string().nullish(),
+  "bestPhotoBase64": zod.string().nullish(),
+  "bestPhotoMime": zod.string().nullish(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListMemoriesResponse = zod.array(ListMemoriesResponseItem)
+
+
+/**
+ * @summary Get memory for a specific country
+ */
+export const GetMemoryParams = zod.object({
+  "countryCode": zod.coerce.string()
+})
+
+export const GetMemoryResponse = zod.object({
+  "id": zod.number(),
+  "countryCode": zod.string(),
+  "country": zod.string(),
+  "bestMemory": zod.string().nullish(),
+  "bestPhotoBase64": zod.string().nullish(),
+  "bestPhotoMime": zod.string().nullish(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Create or update memory for a country
+ */
+export const UpsertMemoryParams = zod.object({
+  "countryCode": zod.coerce.string()
+})
+
+export const UpsertMemoryBody = zod.object({
+  "bestMemory": zod.string().nullish(),
+  "bestPhotoBase64": zod.string().nullish(),
+  "bestPhotoMime": zod.string().nullish()
+})
+
+export const UpsertMemoryResponse = zod.object({
+  "id": zod.number(),
+  "countryCode": zod.string(),
+  "country": zod.string(),
+  "bestMemory": zod.string().nullish(),
+  "bestPhotoBase64": zod.string().nullish(),
+  "bestPhotoMime": zod.string().nullish(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a country memory
+ */
+export const DeleteMemoryParams = zod.object({
+  "countryCode": zod.coerce.string()
+})
+
+
+/**
  * @summary Get visits ordered chronologically for map animation
  */
 export const GetTimelineResponseItem = zod.object({

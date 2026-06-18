@@ -20,6 +20,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CountryMemory,
+  CountryMemoryInput,
   ErrorResponse,
   HealthStatus,
   ListVisitsParams,
@@ -647,6 +649,302 @@ export function useGetYearStats<TData = Awaited<ReturnType<typeof getYearStats>>
 
 
 
+
+export const getListMemoriesUrl = () => {
+
+
+
+
+  return `/api/memories`
+}
+
+/**
+ * @summary List all country memories
+ */
+export const listMemories = async ( options?: RequestInit): Promise<CountryMemory[]> => {
+
+  return customFetch<CountryMemory[]>(getListMemoriesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMemoriesQueryKey = () => {
+    return [
+    `/api/memories`
+    ] as const;
+    }
+
+
+export const getListMemoriesQueryOptions = <TData = Awaited<ReturnType<typeof listMemories>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMemories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMemoriesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMemories>>> = ({ signal }) => listMemories({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMemories>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMemoriesQueryResult = NonNullable<Awaited<ReturnType<typeof listMemories>>>
+export type ListMemoriesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all country memories
+ */
+
+export function useListMemories<TData = Awaited<ReturnType<typeof listMemories>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMemories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMemoriesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetMemoryUrl = (countryCode: string,) => {
+
+
+
+
+  return `/api/memories/${countryCode}`
+}
+
+/**
+ * @summary Get memory for a specific country
+ */
+export const getMemory = async (countryCode: string, options?: RequestInit): Promise<CountryMemory> => {
+
+  return customFetch<CountryMemory>(getGetMemoryUrl(countryCode),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMemoryQueryKey = (countryCode: string,) => {
+    return [
+    `/api/memories/${countryCode}`
+    ] as const;
+    }
+
+
+export const getGetMemoryQueryOptions = <TData = Awaited<ReturnType<typeof getMemory>>, TError = ErrorType<ErrorResponse>>(countryCode: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMemory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMemoryQueryKey(countryCode);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMemory>>> = ({ signal }) => getMemory(countryCode, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(countryCode), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMemory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMemoryQueryResult = NonNullable<Awaited<ReturnType<typeof getMemory>>>
+export type GetMemoryQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get memory for a specific country
+ */
+
+export function useGetMemory<TData = Awaited<ReturnType<typeof getMemory>>, TError = ErrorType<ErrorResponse>>(
+ countryCode: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMemory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMemoryQueryOptions(countryCode,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpsertMemoryUrl = (countryCode: string,) => {
+
+
+
+
+  return `/api/memories/${countryCode}`
+}
+
+/**
+ * @summary Create or update memory for a country
+ */
+export const upsertMemory = async (countryCode: string,
+    countryMemoryInput: CountryMemoryInput, options?: RequestInit): Promise<CountryMemory> => {
+
+  return customFetch<CountryMemory>(getUpsertMemoryUrl(countryCode),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      countryMemoryInput,)
+  }
+);}
+
+
+
+
+export const getUpsertMemoryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertMemory>>, TError,{countryCode: string;data: BodyType<CountryMemoryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertMemory>>, TError,{countryCode: string;data: BodyType<CountryMemoryInput>}, TContext> => {
+
+const mutationKey = ['upsertMemory'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertMemory>>, {countryCode: string;data: BodyType<CountryMemoryInput>}> = (props) => {
+          const {countryCode,data} = props ?? {};
+
+          return  upsertMemory(countryCode,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertMemoryMutationResult = NonNullable<Awaited<ReturnType<typeof upsertMemory>>>
+    export type UpsertMemoryMutationBody = BodyType<CountryMemoryInput>
+    export type UpsertMemoryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create or update memory for a country
+ */
+export const useUpsertMemory = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertMemory>>, TError,{countryCode: string;data: BodyType<CountryMemoryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertMemory>>,
+        TError,
+        {countryCode: string;data: BodyType<CountryMemoryInput>},
+        TContext
+      > => {
+      return useMutation(getUpsertMemoryMutationOptions(options));
+    }
+
+export const getDeleteMemoryUrl = (countryCode: string,) => {
+
+
+
+
+  return `/api/memories/${countryCode}`
+}
+
+/**
+ * @summary Delete a country memory
+ */
+export const deleteMemory = async (countryCode: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteMemoryUrl(countryCode),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteMemoryMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMemory>>, TError,{countryCode: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteMemory>>, TError,{countryCode: string}, TContext> => {
+
+const mutationKey = ['deleteMemory'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteMemory>>, {countryCode: string}> = (props) => {
+          const {countryCode} = props ?? {};
+
+          return  deleteMemory(countryCode,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteMemoryMutationResult = NonNullable<Awaited<ReturnType<typeof deleteMemory>>>
+
+    export type DeleteMemoryMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Delete a country memory
+ */
+export const useDeleteMemory = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMemory>>, TError,{countryCode: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteMemory>>,
+        TError,
+        {countryCode: string},
+        TContext
+      > => {
+      return useMutation(getDeleteMemoryMutationOptions(options));
+    }
 
 export const getGetTimelineUrl = () => {
 

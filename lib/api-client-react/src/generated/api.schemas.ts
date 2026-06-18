@@ -77,6 +77,28 @@ export interface YearSummary {
   cityList?: string[];
 }
 
+export interface CountryMemory {
+  id: number;
+  countryCode: string;
+  country: string;
+  /** @nullable */
+  bestMemory?: string | null;
+  /** @nullable */
+  bestPhotoBase64?: string | null;
+  /** @nullable */
+  bestPhotoMime?: string | null;
+  updatedAt: string;
+}
+
+export interface CountryMemoryInput {
+  /** @nullable */
+  bestMemory?: string | null;
+  /** @nullable */
+  bestPhotoBase64?: string | null;
+  /** @nullable */
+  bestPhotoMime?: string | null;
+}
+
 export interface ErrorResponse {
   error: string;
 }
