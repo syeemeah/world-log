@@ -1,7 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
-import { PlusCircle, Pencil, Trash2, Globe, Search, Filter, CheckSquare, Square } from "lucide-react";
+import { PlusCircle, Pencil, Trash2, Globe, Search, Filter, CheckSquare, Square, Download, Upload } from "lucide-react";
 import {
   useListVisits,
   useDeleteVisit,
@@ -11,14 +11,60 @@ import {
   getGetTimelineQueryKey,
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+
+// ── CSV helpers ──────────────────────────────────────────────────────────────
+
+function escapeCSV(v: string | null | undefined) {
+  const s = v ?? "";
+  return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function downloadBlob(filename: string, content: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function parseCSV(text: string): Record<string, string>[] {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = splitCSVRow(lines[0]);
+  return lines.slice(1).map((line) => {
+    const vals = splitCSVRow(line);
+    return Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? ""]));
+  });
+}
+
+function splitCSVRow(row: string): string[] {
+  const cols: string[] = [];
+  let cur = "", inQ = false;
+  for (let i = 0; i < row.length; i++) {
+    const ch = row[i];
+    if (ch === '"') {
+      if (inQ && row[i + 1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (ch === "," && !inQ) { cols.push(cur); cur = ""; }
+    else cur += ch;
+  }
+  cols.push(cur);
+  return cols;
+}
+
+// ── Component ────────────────────────────────────────────────────────────────
 
 export default function Visits() {
   const [year, setYear] = useState<string>("");
   const [country, setCountry] = useState<string>("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const importRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { session, isEditor } = useAuth();
 
   const params = {
     ...(year ? { year: Number(year) } : {}),
@@ -46,35 +92,24 @@ export default function Visits() {
   const someSelected = selected.size > 0 && !allSelected;
 
   const toggleAll = () => {
-    if (allSelected) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(allIds));
-    }
+    if (allSelected) setSelected(new Set());
+    else setSelected(new Set(allIds));
   };
 
   const toggleOne = (id: number) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };
 
   const deleteSingle = (id: number, city: string) => {
     if (!confirm(`Delete visit to ${city}?`)) return;
-    deleteMutation.mutate(
-      { id },
-      {
-        onSuccess: () => {
-          setSelected((prev) => { const n = new Set(prev); n.delete(id); return n; });
-          invalidateAll();
-          toast({ title: "Visit deleted" });
-        },
-        onError: () => toast({ title: "Failed to delete", variant: "destructive" }),
-      }
-    );
+    deleteMutation.mutate({ id }, {
+      onSuccess: () => { setSelected((prev) => { const n = new Set(prev); n.delete(id); return n; }); invalidateAll(); toast({ title: "Visit deleted" }); },
+      onError: () => toast({ title: "Failed to delete", variant: "destructive" }),
+    });
   };
 
   const deleteSelected = async () => {
@@ -83,21 +118,13 @@ export default function Visits() {
     if (!confirm(`Delete ${count} ${count === 1 ? "visit" : "visits"}?`)) return;
     setDeleting(true);
     try {
-      await Promise.all(
-        Array.from(selected).map((id) =>
-          new Promise<void>((resolve, reject) =>
-            deleteMutation.mutate({ id }, { onSuccess: () => resolve(), onError: reject })
-          )
-        )
-      );
-      setSelected(new Set());
-      invalidateAll();
+      await Promise.all(Array.from(selected).map((id) =>
+        new Promise<void>((resolve, reject) => deleteMutation.mutate({ id }, { onSuccess: () => resolve(), onError: reject }))
+      ));
+      setSelected(new Set()); invalidateAll();
       toast({ title: `${count} ${count === 1 ? "visit" : "visits"} deleted` });
-    } catch {
-      toast({ title: "Some deletes failed", variant: "destructive" });
-    } finally {
-      setDeleting(false);
-    }
+    } catch { toast({ title: "Some deletes failed", variant: "destructive" }); }
+    finally { setDeleting(false); }
   };
 
   const deleteAll = async () => {
@@ -105,21 +132,62 @@ export default function Visits() {
     if (!confirm(`Delete all ${visits.length} visits? This cannot be undone.`)) return;
     setDeleting(true);
     try {
-      await Promise.all(
-        visits.map((v) =>
-          new Promise<void>((resolve, reject) =>
-            deleteMutation.mutate({ id: v.id }, { onSuccess: () => resolve(), onError: reject })
-          )
-        )
-      );
-      setSelected(new Set());
-      invalidateAll();
+      await Promise.all(visits.map((v) =>
+        new Promise<void>((resolve, reject) => deleteMutation.mutate({ id: v.id }, { onSuccess: () => resolve(), onError: reject }))
+      ));
+      setSelected(new Set()); invalidateAll();
       toast({ title: "All visits deleted" });
-    } catch {
-      toast({ title: "Some deletes failed", variant: "destructive" });
-    } finally {
-      setDeleting(false);
-    }
+    } catch { toast({ title: "Some deletes failed", variant: "destructive" }); }
+    finally { setDeleting(false); }
+  };
+
+  // ── Export ──────────────────────────────────────────────────────────────────
+  const handleExport = async () => {
+    // Fetch all visits (no filters) for a full export
+    const res = await fetch("/api/visits");
+    if (!res.ok) { toast({ title: "Export failed", variant: "destructive" }); return; }
+    const all = await res.json() as typeof visits;
+    const header = "city,country,countryCode,visitDate,notes,lat,lng";
+    const rows = all.map((v) =>
+      [v.city, v.country, v.countryCode, v.visitDate, v.notes ?? "", v.lat, v.lng].map(String).map(escapeCSV).join(",")
+    );
+    downloadBlob(`sy-travels-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...rows].join("\n"), "text/csv");
+    toast({ title: `Exported ${all.length} visits` });
+  };
+
+  // ── Import ──────────────────────────────────────────────────────────────────
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !session) return;
+    e.target.value = "";
+    setImporting(true);
+
+    try {
+      const text = await file.text();
+      const rows = parseCSV(text);
+      if (rows.length === 0) { toast({ title: "No rows found in file", variant: "destructive" }); return; }
+
+      let ok = 0, fail = 0;
+      for (const row of rows) {
+        if (!row.city || !row.country || !row.visitDate) { fail++; continue; }
+        const res = await fetch("/api/visits", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.token}` },
+          body: JSON.stringify({
+            city: row.city, country: row.country,
+            countryCode: row.countryCode || "??",
+            visitDate: row.visitDate,
+            notes: row.notes || null,
+            lat: parseFloat(row.lat) || 0,
+            lng: parseFloat(row.lng) || 0,
+          }),
+        });
+        if (res.ok) ok++; else fail++;
+      }
+      invalidateAll();
+      toast({ title: `Import complete`, description: `${ok} added${fail ? `, ${fail} skipped` : ""}` });
+    } catch { toast({ title: "Import failed", variant: "destructive" }); }
+    finally { setImporting(false); }
   };
 
   return (
@@ -133,25 +201,53 @@ export default function Visits() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {visits.length > 0 && (
-            <button
-              onClick={deleteAll}
-              disabled={deleting}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md border border-destructive/40 text-destructive text-sm font-medium hover:bg-destructive/5 transition-colors disabled:opacity-50"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Delete all
-            </button>
-          )}
-          <Link
-            href="/visits/new"
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+          {/* Export — always visible */}
+          <button
+            onClick={handleExport}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            title="Export all visits as CSV"
           >
-            <PlusCircle className="w-4 h-4" />
-            Log visit
-          </Link>
+            <Download className="w-3.5 h-3.5" /> Export CSV
+          </button>
+
+          {/* Import — editors only */}
+          {isEditor && (
+            <>
+              <input ref={importRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
+              <button
+                onClick={() => importRef.current?.click()}
+                disabled={importing}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+                title="Import visits from CSV"
+              >
+                <Upload className="w-3.5 h-3.5" /> {importing ? "Importing…" : "Import CSV"}
+              </button>
+              {visits.length > 0 && (
+                <button
+                  onClick={deleteAll}
+                  disabled={deleting}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md border border-destructive/40 text-destructive text-sm font-medium hover:bg-destructive/5 transition-colors disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete all
+                </button>
+              )}
+              <Link
+                href="/visits/new"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+              >
+                <PlusCircle className="w-4 h-4" /> Log visit
+              </Link>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Import hint bar */}
+      {isEditor && (
+        <div className="px-6 py-2 border-b border-border bg-muted/20 text-xs text-muted-foreground">
+          CSV format: <code className="bg-muted px-1 py-0.5 rounded">city, country, countryCode, visitDate (YYYY-MM-DD), notes, lat, lng</code>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="px-6 py-3 border-b border-border bg-muted/30 flex gap-3 items-center">
@@ -182,7 +278,7 @@ export default function Visits() {
         )}
       </div>
 
-      {/* Bulk action bar — slides in when rows selected */}
+      {/* Bulk action bar */}
       {selected.size > 0 && (
         <div className="px-6 py-2.5 bg-primary/8 border-b border-primary/20 flex items-center gap-3 animate-in slide-in-from-top-1 duration-150">
           <span className="text-sm font-medium text-primary">
@@ -196,12 +292,7 @@ export default function Visits() {
             <Trash2 className="w-3.5 h-3.5" />
             {deleting ? "Deleting…" : `Delete ${selected.size === 1 ? "visit" : "selected"}`}
           </button>
-          <button
-            onClick={() => setSelected(new Set())}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Cancel
-          </button>
+          <button onClick={() => setSelected(new Set())} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
         </div>
       )}
 
@@ -223,22 +314,18 @@ export default function Visits() {
           <table className="w-full text-sm">
             <thead className="bg-muted/40 border-b border-border sticky top-0 z-10">
               <tr>
-                {/* Select-all checkbox */}
                 <th className="w-10 pl-4 py-3">
                   <button
                     onClick={toggleAll}
                     className="flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
                     title={allSelected ? "Deselect all" : "Select all"}
                   >
-                    {allSelected ? (
-                      <CheckSquare className="w-4 h-4 text-primary" />
-                    ) : someSelected ? (
-                      <span className="w-4 h-4 border-2 border-primary rounded-sm flex items-center justify-center">
-                        <span className="w-2 h-0.5 bg-primary rounded-full" />
-                      </span>
-                    ) : (
-                      <Square className="w-4 h-4" />
-                    )}
+                    {allSelected ? <CheckSquare className="w-4 h-4 text-primary" />
+                      : someSelected ? (
+                        <span className="w-4 h-4 border-2 border-primary rounded-sm flex items-center justify-center">
+                          <span className="w-2 h-0.5 bg-primary rounded-full" />
+                        </span>
+                      ) : <Square className="w-4 h-4" />}
                   </button>
                 </th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">City</th>
@@ -254,22 +341,13 @@ export default function Visits() {
                 return (
                   <tr
                     key={visit.id}
-                    className={`border-b border-border transition-colors group cursor-pointer ${
-                      isChecked ? "bg-primary/5 hover:bg-primary/8" : "hover:bg-muted/20"
-                    }`}
+                    className={`border-b border-border transition-colors group cursor-pointer ${isChecked ? "bg-primary/5 hover:bg-primary/8" : "hover:bg-muted/20"}`}
                     onClick={() => toggleOne(visit.id)}
                   >
-                    {/* Checkbox */}
                     <td className="w-10 pl-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => toggleOne(visit.id)}
-                        className="flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        {isChecked ? (
-                          <CheckSquare className="w-4 h-4 text-primary" />
-                        ) : (
-                          <Square className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        )}
+                      <button onClick={() => toggleOne(visit.id)} className="flex items-center justify-center text-muted-foreground hover:text-primary transition-colors">
+                        {isChecked ? <CheckSquare className="w-4 h-4 text-primary" />
+                          : <Square className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />}
                       </button>
                     </td>
                     <td className="px-3 py-3 font-medium text-foreground">{visit.city}</td>
@@ -280,9 +358,7 @@ export default function Visits() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {new Date(visit.visitDate).toLocaleDateString("en-US", {
-                        year: "numeric", month: "short", day: "numeric",
-                      })}
+                      {new Date(visit.visitDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground max-w-xs">
                       <span className="truncate block">
@@ -291,16 +367,10 @@ export default function Visits() {
                     </td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
-                        <Link
-                          href={`/visits/${visit.id}/edit`}
-                          className="p-1.5 rounded hover:bg-muted transition-colors"
-                        >
+                        <Link href={`/visits/${visit.id}/edit`} className="p-1.5 rounded hover:bg-muted transition-colors">
                           <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                         </Link>
-                        <button
-                          onClick={() => deleteSingle(visit.id, visit.city)}
-                          className="p-1.5 rounded hover:bg-destructive/10 transition-colors"
-                        >
+                        <button onClick={() => deleteSingle(visit.id, visit.city)} className="p-1.5 rounded hover:bg-destructive/10 transition-colors">
                           <Trash2 className="w-3.5 h-3.5 text-destructive" />
                         </button>
                       </div>
