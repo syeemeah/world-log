@@ -1,4 +1,5 @@
-import { BarChart2, Globe, Map, Layers } from "lucide-react";
+import { ExternalLink, BarChart2, Globe, Map, Layers, BookOpen, Camera, Link2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import {
   useGetYearStats,
   useGetOverview,
@@ -14,14 +15,48 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useAuth } from "@/hooks/use-auth";
+
+interface TravelLink {
+  id: number;
+  year: number;
+  title: string;
+  url: string;
+  type: "blog" | "photos" | "other";
+  description: string | null;
+}
+
+const TYPE_META = {
+  blog:   { label: "Blog", icon: BookOpen, color: "text-blue-600 bg-blue-50" },
+  photos: { label: "Photos", icon: Camera, color: "text-amber-600 bg-amber-50" },
+  other:  { label: "Link", icon: Link2, color: "text-muted-foreground bg-muted" },
+} as const;
 
 export default function Stats() {
+  const { session } = useAuth();
+
   const { data: yearStats = [], isLoading: yearLoading } = useGetYearStats({
     query: { queryKey: getGetYearStatsQueryKey() },
   });
   const { data: overview } = useGetOverview({
     query: { queryKey: getGetOverviewQueryKey() },
   });
+  const { data: links = [] } = useQuery<TravelLink[]>({
+    queryKey: ["links"],
+    queryFn: async () => {
+      const res = await fetch("/api/links", {
+        headers: { Authorization: `Bearer ${session?.token ?? ""}` },
+      });
+      if (!res.ok) throw new Error("Failed to load links");
+      return res.json() as Promise<TravelLink[]>;
+    },
+    enabled: !!session?.token,
+  });
+
+  const linksByYear = links.reduce<Record<number, TravelLink[]>>((acc, l) => {
+    (acc[l.year] ??= []).push(l);
+    return acc;
+  }, {});
 
   const chartData = [...yearStats].sort((a, b) => a.year - b.year).map((y) => ({
     year: String(y.year),
@@ -95,37 +130,51 @@ export default function Stats() {
         ) : yearStats.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm">No travel data yet. Log your first visit to see stats.</div>
         ) : (
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/40 border-b border-border">
-                <tr>
-                  <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Year</th>
-                  <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Countries</th>
-                  <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Cities</th>
-                  <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Visits</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Countries visited</th>
-                </tr>
-              </thead>
-              <tbody>
-                {yearStats.map((row, i) => (
-                  <tr key={row.year} className={`border-b border-border last:border-0 ${i % 2 === 0 ? "" : "bg-muted/20"}`}>
-                    <td className="px-5 py-3.5 font-semibold text-foreground">{row.year}</td>
-                    <td className="px-4 py-3.5 text-center">
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold text-xs">{row.countries}</span>
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 font-semibold text-xs">{row.cities}</span>
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-50 text-amber-600 font-semibold text-xs">{row.visits}</span>
-                    </td>
-                    <td className="px-4 py-3.5 text-muted-foreground text-xs max-w-xs">
-                      <span className="leading-relaxed">{row.countryList?.join(", ") || "—"}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-3">
+            {yearStats.map((row) => {
+              const yearLinks = linksByYear[row.year] ?? [];
+              return (
+                <div key={row.year} className="bg-card border border-border rounded-xl overflow-hidden">
+                  {/* Year header row */}
+                  <div className="flex items-center gap-4 px-5 py-4 border-b border-border">
+                    <span className="text-lg font-bold text-foreground w-14 flex-shrink-0">{row.year}</span>
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="inline-flex items-center gap-1.5 text-xs text-primary font-medium">
+                        <Globe className="w-3.5 h-3.5" />{row.countries} {row.countries === 1 ? "country" : "countries"}
+                      </span>
+                      <span className="text-muted-foreground/40">·</span>
+                      <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
+                        <Map className="w-3.5 h-3.5" />{row.cities} {row.cities === 1 ? "city" : "cities"}
+                      </span>
+                      <span className="text-muted-foreground/40">·</span>
+                      <span className="text-xs text-muted-foreground truncate">{row.countryList?.join(", ") || "—"}</span>
+                    </div>
+                  </div>
+                  {/* Journal links for this year */}
+                  {yearLinks.length > 0 && (
+                    <div className="px-5 py-3 flex flex-wrap gap-2">
+                      {yearLinks.map((link) => {
+                        const meta = TYPE_META[link.type];
+                        const Icon = meta.icon;
+                        return (
+                          <a
+                            key={link.id}
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-opacity hover:opacity-75 ${meta.color}`}
+                          >
+                            <Icon className="w-3 h-3 flex-shrink-0" />
+                            {link.title}
+                            <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

@@ -1,9 +1,10 @@
 import { useState, useCallback, useRef } from "react";
 import { Link, useLocation } from "wouter";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import {
   Globe, Camera, X, Save, ChevronDown, ChevronUp,
   Pencil, Trash2, PlusCircle, MapPin, CalendarDays,
+  BookOpen, Link2, ExternalLink,
 } from "lucide-react";
 import {
   useListVisits,
@@ -18,6 +19,22 @@ import {
 } from "@workspace/api-client-react";
 import type { Visit } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+
+interface TravelLink {
+  id: number;
+  year: number;
+  title: string;
+  url: string;
+  type: "blog" | "photos" | "other";
+  description: string | null;
+}
+
+const TYPE_META = {
+  blog:   { label: "Blog", icon: BookOpen, color: "text-blue-600 bg-blue-50" },
+  photos: { label: "Photos", icon: Camera, color: "text-amber-600 bg-amber-50" },
+  other:  { label: "Link", icon: Link2, color: "text-muted-foreground bg-muted" },
+} as const;
 
 const TOTAL_COUNTRIES = 195;
 
@@ -34,11 +51,13 @@ function countryFlag(code: string): string {
 function CountryCard({
   group,
   memory,
+  links,
   onSave,
   onDeleteVisit,
 }: {
   group: CountryGroup;
   memory?: { bestMemory?: string | null; bestPhotoBase64?: string | null; bestPhotoMime?: string | null };
+  links: TravelLink[];
   onSave: (code: string, data: { bestMemory?: string | null; bestPhotoBase64?: string | null; bestPhotoMime?: string | null }) => void;
   onDeleteVisit: (id: number, city: string) => void;
 }) {
@@ -89,6 +108,7 @@ function CountryCard({
           <span className="text-xs text-muted-foreground">{group.visits.length} {group.visits.length === 1 ? "visit" : "visits"}</span>
           {photo && <Camera className="w-3.5 h-3.5 text-primary" />}
           {memo && <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+          {links.length > 0 && <BookOpen className="w-3.5 h-3.5 text-blue-500" />}
           {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
         </div>
       </button>
@@ -212,6 +232,36 @@ function CountryCard({
               </button>
             )}
           </div>
+
+          {/* Journal links */}
+          {links.length > 0 && (
+            <>
+              <div className="mx-5 border-t border-border" />
+              <div className="px-5 py-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2.5">Travel Journal</p>
+                <div className="flex flex-wrap gap-2">
+                  {links.map((link) => {
+                    const meta = TYPE_META[link.type];
+                    const Icon = meta.icon;
+                    return (
+                      <a
+                        key={link.id}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`${link.year}${link.description ? " · " + link.description : ""}`}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-opacity hover:opacity-75 ${meta.color}`}
+                      >
+                        <Icon className="w-3 h-3 flex-shrink-0" />
+                        <span>{link.year} · {link.title}</span>
+                        <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -221,9 +271,21 @@ function CountryCard({
 export default function Countries() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { session } = useAuth();
 
   const { data: visits = [] } = useListVisits({}, { query: { queryKey: getListVisitsQueryKey() } });
   const { data: memories = [] } = useListMemories({ query: { queryKey: getListMemoriesQueryKey() } });
+  const { data: links = [] } = useQuery<TravelLink[]>({
+    queryKey: ["links"],
+    queryFn: async () => {
+      const res = await fetch("/api/links", {
+        headers: { Authorization: `Bearer ${session?.token ?? ""}` },
+      });
+      if (!res.ok) throw new Error("Failed to load links");
+      return res.json() as Promise<TravelLink[]>;
+    },
+    enabled: !!session?.token,
+  });
 
   const upsertMutation = useUpsertMemory({
     mutation: {
@@ -259,6 +321,14 @@ export default function Countries() {
   const groups = Array.from(countryMap.values()).sort((a, b) => a.country.localeCompare(b.country));
 
   const memoriesByCode = Object.fromEntries(memories.map((m) => [m.countryCode, m]));
+
+  // Map journal links to each country via the years that country was visited
+  const linksByCountry = new Map<string, TravelLink[]>();
+  for (const group of groups) {
+    const visitYears = new Set(group.visits.map((v) => new Date(v.visitDate).getFullYear()));
+    const matching = links.filter((l) => visitYears.has(l.year));
+    if (matching.length) linksByCountry.set(group.countryCode, matching);
+  }
   const visited = groups.length;
   const pct = Math.round((visited / TOTAL_COUNTRIES) * 100);
 
@@ -311,6 +381,7 @@ export default function Countries() {
                   key={group.countryCode}
                   group={group}
                   memory={memoriesByCode[group.countryCode]}
+                  links={linksByCountry.get(group.countryCode) ?? []}
                   onSave={handleSave}
                   onDeleteVisit={handleDeleteVisit}
                 />
