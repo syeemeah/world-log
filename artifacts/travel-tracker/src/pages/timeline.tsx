@@ -1,8 +1,29 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup, Polyline, useMap } from "react-leaflet";
 import { Play, Pause, SkipBack, SkipForward, Clock, Globe } from "lucide-react";
 import { useGetTimeline, getGetTimelineQueryKey } from "@workspace/api-client-react";
 import type { Visit } from "@workspace/api-client-react";
+
+// Shared year palette (same order as world map)
+const YEAR_PALETTE = [
+  { stroke: "#0369a1", fill: "#38bdf8" },
+  { stroke: "#047857", fill: "#34d399" },
+  { stroke: "#b45309", fill: "#fbbf24" },
+  { stroke: "#7c3aed", fill: "#a78bfa" },
+  { stroke: "#be123c", fill: "#fb7185" },
+  { stroke: "#0e7490", fill: "#22d3ee" },
+  { stroke: "#a16207", fill: "#facc15" },
+  { stroke: "#065f46", fill: "#6ee7b7" },
+  { stroke: "#9333ea", fill: "#c084fc" },
+  { stroke: "#c2410c", fill: "#fb923c" },
+  { stroke: "#0f766e", fill: "#5eead4" },
+  { stroke: "#1d4ed8", fill: "#60a5fa" },
+];
+
+function getYearColor(year: number, sortedYears: number[]) {
+  const idx = sortedYears.indexOf(year);
+  return YEAR_PALETTE[idx % YEAR_PALETTE.length];
+}
 
 function FlyTo({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap();
@@ -23,6 +44,11 @@ export default function Timeline() {
 
   const visibleVisits = currentIndex === -1 ? [] : visits.slice(0, currentIndex + 1);
   const current: Visit | undefined = visits[currentIndex];
+
+  const sortedYears = useMemo(() => {
+    const years = Array.from(new Set(visits.map((v) => new Date(v.visitDate).getFullYear())));
+    return years.sort((a, b) => a - b);
+  }, [visits]);
 
   const stop = useCallback(() => {
     setPlaying(false);
@@ -86,7 +112,6 @@ export default function Timeline() {
               : `${currentIndex + 1} / ${visits.length} visits`}
           </p>
         </div>
-        {/* Controls */}
         <div className="flex items-center gap-2">
           <button onClick={reset} className="p-2 rounded-md hover:bg-muted transition-colors" title="Reset">
             <SkipBack className="w-4 h-4" />
@@ -131,32 +156,80 @@ export default function Timeline() {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            {polylinePositions.length > 1 && (
-              <Polyline
-                positions={polylinePositions}
-                pathOptions={{ color: "hsl(196,80%,55%)", weight: 2, opacity: 0.6, dashArray: "6 4" }}
-              />
-            )}
-            {visibleVisits.map((visit, i) => (
-              <CircleMarker
-                key={visit.id}
-                center={[visit.lat, visit.lng]}
-                radius={i === visibleVisits.length - 1 ? 10 : 7}
-                pathOptions={{
-                  color: i === visibleVisits.length - 1 ? "hsl(35,80%,55%)" : "hsl(196,80%,42%)",
-                  fillColor: i === visibleVisits.length - 1 ? "hsl(35,80%,65%)" : "hsl(196,80%,55%)",
-                  fillOpacity: 0.9,
-                  weight: 2,
-                }}
-              >
-                <Popup>
-                  <p className="font-semibold text-sm">{visit.city}</p>
-                  <p className="text-xs text-gray-600">{visit.country}</p>
-                  <p className="text-xs text-gray-500">{new Date(visit.visitDate).toLocaleDateString()}</p>
-                </Popup>
-              </CircleMarker>
-            ))}
+            {/* Polyline segments colored by year */}
+            {visibleVisits.slice(1).map((visit, i) => {
+              const year = new Date(visibleVisits[i].visitDate).getFullYear();
+              const { fill } = getYearColor(year, sortedYears);
+              return (
+                <Polyline
+                  key={`seg-${visit.id}`}
+                  positions={[
+                    [visibleVisits[i].lat, visibleVisits[i].lng],
+                    [visit.lat, visit.lng],
+                  ]}
+                  pathOptions={{ color: fill, weight: 2, opacity: 0.55, dashArray: "6 4" }}
+                />
+              );
+            })}
+
+            {visibleVisits.map((visit, i) => {
+              const year = new Date(visit.visitDate).getFullYear();
+              const { stroke, fill } = getYearColor(year, sortedYears);
+              const isCurrent = i === visibleVisits.length - 1;
+              return (
+                <CircleMarker
+                  key={visit.id}
+                  center={[visit.lat, visit.lng]}
+                  radius={isCurrent ? 10 : 7}
+                  pathOptions={{
+                    color: isCurrent ? "#fff" : stroke,
+                    fillColor: fill,
+                    fillOpacity: 0.9,
+                    weight: isCurrent ? 3 : 1.5,
+                  }}
+                >
+                  <Popup>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span
+                        className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ background: fill, border: `2px solid ${stroke}` }}
+                      />
+                      <p className="font-semibold text-sm">{visit.city}</p>
+                    </div>
+                    <p className="text-xs text-gray-600">{visit.country}</p>
+                    <p className="text-xs text-gray-500">{new Date(visit.visitDate).toLocaleDateString()}</p>
+                  </Popup>
+                </CircleMarker>
+              );
+            })}
+
             {current && <FlyTo lat={current.lat} lng={current.lng} />}
+
+            {/* Year legend */}
+            {sortedYears.length > 0 && (
+              <div className="leaflet-bottom leaflet-left" style={{ pointerEvents: "none" }}>
+                <div
+                  style={{ pointerEvents: "auto" }}
+                  className="leaflet-control bg-white/90 backdrop-blur-sm rounded-lg shadow-md px-3 py-2 mb-6 ml-3 border border-gray-200"
+                >
+                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Year</p>
+                  <div className="flex flex-col gap-1">
+                    {sortedYears.map((year) => {
+                      const { stroke, fill } = getYearColor(year, sortedYears);
+                      return (
+                        <div key={year} className="flex items-center gap-1.5">
+                          <span
+                            className="inline-block w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ background: fill, border: `2px solid ${stroke}` }}
+                          />
+                          <span className="text-xs text-gray-700 font-medium">{year}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </MapContainer>
         </div>
 
@@ -165,28 +238,68 @@ export default function Timeline() {
           <div className="px-4 py-2 border-b border-border sticky top-0 bg-card">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Journey</p>
           </div>
-          {visits.map((visit, i) => {
-            const isPast = i <= currentIndex;
-            const isCurrent = i === currentIndex;
+
+          {/* Group by year */}
+          {sortedYears.map((year) => {
+            const yearVisits = visits.filter(
+              (v) => new Date(v.visitDate).getFullYear() === year
+            );
+            const { stroke, fill } = getYearColor(year, sortedYears);
             return (
-              <div
-                key={visit.id}
-                onClick={() => { stop(); setCurrentIndex(i); }}
-                className={`px-4 py-2.5 border-b border-border cursor-pointer transition-colors text-sm ${
-                  isCurrent
-                    ? "bg-accent text-accent-foreground"
-                    : isPast
-                    ? "text-foreground hover:bg-muted/50"
-                    : "text-muted-foreground hover:bg-muted/30"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isCurrent ? "bg-amber-500" : isPast ? "bg-primary" : "bg-muted-foreground/30"}`} />
-                  <div>
-                    <p className="font-medium leading-tight">{visit.city}</p>
-                    <p className="text-xs text-muted-foreground">{visit.country} · {new Date(visit.visitDate).toLocaleDateString("en-US", { year: "numeric", month: "short" })}</p>
-                  </div>
+              <div key={year}>
+                {/* Year header */}
+                <div
+                  className="px-4 py-1.5 flex items-center gap-2 border-b border-border sticky top-[33px] bg-card/95 backdrop-blur-sm z-10"
+                  style={{ borderLeft: `3px solid ${fill}` }}
+                >
+                  <span
+                    className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ background: fill, border: `2px solid ${stroke}` }}
+                  />
+                  <span className="text-xs font-semibold" style={{ color: stroke }}>{year}</span>
                 </div>
+
+                {yearVisits.map((visit) => {
+                  const idx = visits.indexOf(visit);
+                  const isPast = idx <= currentIndex;
+                  const isCurrent = idx === currentIndex;
+                  return (
+                    <div
+                      key={visit.id}
+                      onClick={() => { stop(); setCurrentIndex(idx); }}
+                      className={`px-4 py-2.5 border-b border-border cursor-pointer transition-colors text-sm ${
+                        isCurrent
+                          ? "bg-accent text-accent-foreground"
+                          : isPast
+                          ? "text-foreground hover:bg-muted/50"
+                          : "text-muted-foreground hover:bg-muted/30"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-2 h-2 rounded-full flex-shrink-0 transition-all"
+                          style={
+                            isCurrent
+                              ? { background: fill, border: `2px solid ${stroke}`, transform: "scale(1.3)" }
+                              : isPast
+                              ? { background: fill, border: `2px solid ${stroke}` }
+                              : { background: "transparent", border: "2px solid #d1d5db" }
+                          }
+                        />
+                        <div>
+                          <p className="font-medium leading-tight">{visit.city}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {visit.country} ·{" "}
+                            {new Date(visit.visitDate).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             );
           })}
