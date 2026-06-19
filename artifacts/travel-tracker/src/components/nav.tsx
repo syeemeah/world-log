@@ -1,9 +1,9 @@
 import { Link, useLocation } from "wouter";
-import { Globe, Clock, Map, PlusCircle, BarChart2, FlagTriangleRight, LogIn, LogOut } from "lucide-react";
+import { Globe, Clock, Map, PlusCircle, BarChart2, FlagTriangleRight, LogIn, LogOut, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 
-const links = [
+const publicLinks = [
   { href: "/", label: "World Map", icon: Globe },
   { href: "/timeline", label: "Timeline", icon: Clock },
   { href: "/visits", label: "All Visits", icon: Map },
@@ -13,7 +13,7 @@ const links = [
 
 export default function Nav() {
   const [location] = useLocation();
-  const { isAdmin, logout } = useAuth();
+  const { session, isAdmin, isEditor, logout } = useAuth();
 
   return (
     <aside className="w-56 flex-shrink-0 flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
@@ -25,14 +25,18 @@ export default function Nav() {
           </div>
           <span className="font-semibold text-base tracking-tight text-white">SY's Travel Log</span>
         </div>
-        <p className="text-xs text-sidebar-foreground/50 mt-1.5 pl-9">
-          {isAdmin ? "Editing mode" : "View only"}
-        </p>
+        {session ? (
+          <p className="text-xs text-sidebar-foreground/50 mt-1.5 pl-9">
+            {session.username} · {session.role}
+          </p>
+        ) : (
+          <p className="text-xs text-sidebar-foreground/50 mt-1.5 pl-9">View only</p>
+        )}
       </div>
 
       {/* Nav links */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {links.map(({ href, label, icon: Icon }) => {
+        {publicLinks.map(({ href, label, icon: Icon }) => {
           const active = href === "/" ? location === "/" : location.startsWith(href);
           return (
             <Link
@@ -50,11 +54,27 @@ export default function Nav() {
             </Link>
           );
         })}
+
+        {/* Admin-only: Accounts */}
+        {isAdmin && (
+          <Link
+            href="/users"
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+              location.startsWith("/users")
+                ? "bg-sidebar-accent text-white"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+            )}
+          >
+            <Users className="w-4 h-4 flex-shrink-0" />
+            Accounts
+          </Link>
+        )}
       </nav>
 
-      {/* Admin actions */}
+      {/* Bottom actions */}
       <div className="px-3 pb-5 space-y-2">
-        {isAdmin ? (
+        {isEditor ? (
           <>
             <Link
               href="/visits/new"

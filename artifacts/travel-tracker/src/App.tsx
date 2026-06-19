@@ -12,6 +12,7 @@ import EditVisit from "@/pages/edit-visit";
 import Stats from "@/pages/stats";
 import Countries from "@/pages/countries";
 import Login from "@/pages/login";
+import Users from "@/pages/users";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -19,13 +20,19 @@ const queryClient = new QueryClient({
 });
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+  const { isEditor } = useAuth();
+  if (!isEditor) return <Redirect to="/login" />;
+  return <Component />;
+}
+
+function AdminRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAdmin } = useAuth();
-  if (!isAdmin) return <Redirect to="/login" />;
+  if (!isAdmin) return <Redirect to="/" />;
   return <Component />;
 }
 
 function Router() {
-  const { isAdmin } = useAuth();
+  const { session } = useAuth();
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -38,7 +45,10 @@ function Router() {
           <Route path="/stats" component={Stats} />
           <Route path="/countries" component={Countries} />
           <Route path="/login">
-            {isAdmin ? <Redirect to="/" /> : <Login />}
+            {session ? <Redirect to="/" /> : <Login />}
+          </Route>
+          <Route path="/users">
+            <AdminRoute component={Users} />
           </Route>
           <Route path="/visits/new">
             <ProtectedRoute component={NewVisit} />
