@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, countryMemoriesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { requireAuth } from "./auth";
 
 const router = Router();
 
@@ -18,7 +19,7 @@ router.get("/memories/:countryCode", async (req, res) => {
   res.json(fmt(row));
 });
 
-router.put("/memories/:countryCode", async (req, res) => {
+router.put("/memories/:countryCode", requireAuth, async (req, res) => {
   const code = req.params.countryCode.toUpperCase();
   const { bestMemory, bestPhotoBase64, bestPhotoMime, country } = req.body as {
     bestMemory?: string | null;
@@ -27,7 +28,6 @@ router.put("/memories/:countryCode", async (req, res) => {
     country?: string;
   };
 
-  // Resolve country name from existing visits if not provided
   let countryName = country ?? "";
   if (!countryName) {
     const { visitsTable } = await import("@workspace/db");
@@ -41,30 +41,17 @@ router.put("/memories/:countryCode", async (req, res) => {
 
   const [row] = await db
     .insert(countryMemoriesTable)
-    .values({
-      countryCode: code,
-      country: countryName,
-      bestMemory: bestMemory ?? null,
-      bestPhotoBase64: bestPhotoBase64 ?? null,
-      bestPhotoMime: bestPhotoMime ?? null,
-      updatedAt: new Date(),
-    })
+    .values({ countryCode: code, country: countryName, bestMemory: bestMemory ?? null, bestPhotoBase64: bestPhotoBase64 ?? null, bestPhotoMime: bestPhotoMime ?? null, updatedAt: new Date() })
     .onConflictDoUpdate({
       target: countryMemoriesTable.countryCode,
-      set: {
-        bestMemory: bestMemory ?? null,
-        bestPhotoBase64: bestPhotoBase64 ?? null,
-        bestPhotoMime: bestPhotoMime ?? null,
-        updatedAt: new Date(),
-        ...(countryName ? { country: countryName } : {}),
-      },
+      set: { bestMemory: bestMemory ?? null, bestPhotoBase64: bestPhotoBase64 ?? null, bestPhotoMime: bestPhotoMime ?? null, updatedAt: new Date(), ...(countryName ? { country: countryName } : {}) },
     })
     .returning();
 
   res.json(fmt(row));
 });
 
-router.delete("/memories/:countryCode", async (req, res) => {
+router.delete("/memories/:countryCode", requireAuth, async (req, res) => {
   const [deleted] = await db
     .delete(countryMemoriesTable)
     .where(eq(countryMemoriesTable.countryCode, req.params.countryCode.toUpperCase()))
