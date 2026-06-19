@@ -11,6 +11,7 @@ import NewVisit from "@/pages/new-visit";
 import EditVisit from "@/pages/edit-visit";
 import Stats from "@/pages/stats";
 import Countries from "@/pages/countries";
+import Links from "@/pages/links";
 import Login from "@/pages/login";
 import Users from "@/pages/users";
 import NotFound from "@/pages/not-found";
@@ -44,6 +45,7 @@ function Router() {
           <Route path="/visits" component={Visits} />
           <Route path="/stats" component={Stats} />
           <Route path="/countries" component={Countries} />
+          <Route path="/links" component={Links} />
           <Route path="/login">
             {session ? <Redirect to="/" /> : <Login />}
           </Route>
