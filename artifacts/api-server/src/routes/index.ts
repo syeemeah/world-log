@@ -4,7 +4,7 @@ import visitsRouter from "./visits";
 import statsRouter from "./stats";
 import memoriesRouter from "./memories";
 import authRouter from "./auth";
-import linksRouter from "./links";
+import journalRouter from "./journal";
 
 const router: IRouter = Router();
 
@@ -13,6 +13,6 @@ router.use(healthRouter);
 router.use(visitsRouter);
 router.use(statsRouter);
 router.use(memoriesRouter);
-router.use(linksRouter);
+router.use(journalRouter);
 
 export default router;
