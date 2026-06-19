@@ -14,6 +14,7 @@ import Countries from "@/pages/countries";
 import Links from "@/pages/links";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
+import Landing from "@/pages/landing";
 import Users from "@/pages/users";
 import NotFound from "@/pages/not-found";
 
@@ -48,7 +49,7 @@ function Router() {
             {session ? <Redirect to="/" /> : <Register />}
           </Route>
           <Route path="/">
-            <ProtectedRoute component={Dashboard} />
+            {session ? <Dashboard /> : <Landing />}
           </Route>
           <Route path="/timeline">
             <ProtectedRoute component={Timeline} />
