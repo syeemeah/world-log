@@ -34,7 +34,7 @@ export default function Register() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary mb-4">
             <Globe className="w-7 h-7 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Create your Travel Log</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Create your World Log</h1>
           <p className="text-sm text-muted-foreground mt-1">Start tracking your adventures</p>
         </div>
 

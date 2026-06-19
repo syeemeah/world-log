@@ -24,7 +24,7 @@ export default function Nav() {
           <div className="w-7 h-7 rounded-full bg-sidebar-primary flex items-center justify-center">
             <Globe className="w-4 h-4 text-sidebar-primary-foreground" />
           </div>
-          <span className="font-semibold text-base tracking-tight text-white">SY's Travel Log</span>
+          <span className="font-semibold text-base tracking-tight text-white">World Log</span>
         </div>
         {session ? (
           <p className="text-xs text-sidebar-foreground/50 mt-1.5 pl-9">
