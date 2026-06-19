@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UserPlus, Trash2, ShieldCheck, Pencil, X, Check } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -40,11 +40,11 @@ export default function Users() {
   const { session, isAdmin } = useAuth();
   const { toast } = useToast();
   const { users, loading, load, setUsers } = useUsers(session?.token);
-  const [loaded, setLoaded] = useState(false);
 
-  if (!loaded) {
-    load().then(() => setLoaded(true));
-  }
+  useEffect(() => {
+    load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.token]);
 
   const [showAdd, setShowAdd] = useState(false);
   const [newUsername, setNewUsername] = useState("");

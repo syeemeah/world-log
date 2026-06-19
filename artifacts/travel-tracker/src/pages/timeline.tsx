@@ -1,8 +1,63 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup, Polyline, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Popup, Polyline, Marker, useMap } from "react-leaflet";
+import L from "leaflet";
 import { Play, Pause, SkipBack, SkipForward, Clock, Globe } from "lucide-react";
 import { useGetTimeline, getGetTimelineQueryKey } from "@workspace/api-client-react";
 import type { Visit } from "@workspace/api-client-react";
+
+function getBearing(from: [number, number], to: [number, number]): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const lat1 = toRad(from[0]);
+  const lat2 = toRad(to[0]);
+  const dLon = toRad(to[1] - from[1]);
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+
+function makePlaneIcon(bearing: number): L.DivIcon {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+      <g transform="rotate(${bearing}, 16, 16)">
+        <!-- Glow ring -->
+        <circle cx="16" cy="16" r="14" fill="rgba(34,211,238,0.12)" stroke="rgba(34,211,238,0.4)" stroke-width="1"/>
+        <!-- Plane body -->
+        <path fill="#22d3ee" filter="url(#pg)"
+          d="M16,5 L18.5,13 L26,13 L21,17 L23,26 L16,22 L9,26 L11,17 L6,13 L13.5,13 Z"/>
+      </g>
+      <defs>
+        <filter id="pg" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" result="b"/>
+          <feFlood flood-color="#22d3ee" flood-opacity="0.8" result="c"/>
+          <feComposite in="c" in2="b" operator="in" result="glow"/>
+          <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+    </svg>`;
+  return L.divIcon({
+    html: `<div class="wl-plane-icon">${svg}</div>`,
+    className: "",
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
+}
+
+const PLANE_PULSE_CSS = `
+@keyframes wl-plane-pulse {
+  0%   { transform: scale(1);   opacity: 1; }
+  70%  { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.wl-plane-icon { position: relative; }
+.wl-plane-icon::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(34,211,238,0.35);
+  animation: wl-plane-pulse 1.6s ease-out infinite;
+}
+`;
 
 // Shared year palette (same order as world map)
 const YEAR_PALETTE = [
@@ -41,6 +96,17 @@ export default function Timeline() {
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [playing, setPlaying] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Inject plane pulse CSS once
+  useEffect(() => {
+    const id = "wl-plane-styles";
+    if (!document.getElementById(id)) {
+      const style = document.createElement("style");
+      style.id = id;
+      style.textContent = PLANE_PULSE_CSS;
+      document.head.appendChild(style);
+    }
+  }, []);
 
   const visibleVisits = currentIndex === -1 ? [] : visits.slice(0, currentIndex + 1);
   const current: Visit | undefined = visits[currentIndex];
@@ -204,6 +270,22 @@ export default function Timeline() {
             })}
 
             {current && <FlyTo lat={current.lat} lng={current.lng} />}
+
+            {/* Animated plane at current position */}
+            {current && (() => {
+              const prev = currentIndex > 0 ? visits[currentIndex - 1] : null;
+              const bearing = prev
+                ? getBearing([prev.lat, prev.lng], [current.lat, current.lng])
+                : 0;
+              return (
+                <Marker
+                  key={`plane-${currentIndex}`}
+                  position={[current.lat, current.lng]}
+                  icon={makePlaneIcon(bearing)}
+                  zIndexOffset={1000}
+                />
+              );
+            })()}
 
             {/* Year legend */}
             {sortedYears.length > 0 && (
