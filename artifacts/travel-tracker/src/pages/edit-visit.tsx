@@ -123,6 +123,7 @@ export default function EditVisit() {
     if (!form.country || !cityInput.trim()) {
       setCitySuggestions([]);
       setShowCityDropdown(false);
+      setCitySearching(false);
       return;
     }
     if (cityDebounceRef.current) clearTimeout(cityDebounceRef.current);
@@ -352,10 +353,10 @@ export default function EditVisit() {
 
         <button
           type="submit"
-          disabled={mutation.isPending || citySearching}
+          disabled={mutation.isPending}
           className="w-full py-3 rounded-md bg-primary text-primary-foreground font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-60"
         >
-          {mutation.isPending ? "Saving..." : citySearching ? "Locating city…" : "Save changes"}
+          {mutation.isPending ? "Saving..." : "Save changes"}
         </button>
       </form>
     </div>
