@@ -12,6 +12,7 @@ interface AuthCtx {
   isAdmin: boolean;
   isEditor: boolean;
   login: (username: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  register: (username: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
 }
 
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthCtx>({
   isAdmin: false,
   isEditor: false,
   login: async () => ({ ok: false }),
+  register: async () => ({ ok: false }),
   logout: () => {},
 });
 
@@ -65,6 +67,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const register = async (username: string, password: string) => {
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
+      const data = await res.json() as { token?: string; username?: string; role?: string; error?: string };
+      if (!res.ok) return { ok: false, error: data.error ?? "Registration failed" };
+
+      const s: AuthSession = {
+        token: data.token!,
+        username: data.username!,
+        role: data.role as "admin" | "editor",
+      };
+      setSession(s);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "Could not connect to server" };
+    }
+  };
+
   const logout = () => {
     setSession(null);
     localStorage.removeItem(STORAGE_KEY);
@@ -74,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isEditor = session?.role === "admin" || session?.role === "editor";
 
   return (
-    <AuthContext.Provider value={{ session, isAdmin, isEditor, login, logout }}>
+    <AuthContext.Provider value={{ session, isAdmin, isEditor, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

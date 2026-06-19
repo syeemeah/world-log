@@ -264,7 +264,8 @@ export default function Countries() {
 
   const handleSave = (countryCode: string, data: { bestMemory?: string | null; bestPhotoBase64?: string | null; bestPhotoMime?: string | null }) => {
     const country = countryMap.get(countryCode)?.country ?? countryCode;
-    upsertMutation.mutate({ countryCode, data: { ...data, country } });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    upsertMutation.mutate({ countryCode, data: { ...data, country } as any });
   };
 
   const handleDeleteVisit = (id: number, city: string) => {

@@ -90,7 +90,8 @@ export default function Links() {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [editId, setEditId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<Partial<TravelLink> & { year: string }>({ year: "" });
+  type EditForm = { year: string; id?: number; title?: string; url?: string; type?: "blog" | "photos" | "other"; description?: string | null; createdAt?: string };
+  const [editForm, setEditForm] = useState<EditForm>({ year: "" });
 
   const startEdit = (l: TravelLink) => {
     setEditId(l.id);
@@ -198,7 +199,7 @@ export default function Links() {
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Type</label>
-                <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as "blog" | "photos" | "other" }))}
+                <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as "blog" }))}
                   className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring">
                   <option value="blog">Blog post</option>
                   <option value="photos">Photo dump</option>
@@ -277,7 +278,7 @@ export default function Links() {
                           </div>
                           <div>
                             <label className="text-xs text-muted-foreground mb-1 block">Type</label>
-                            <select value={editForm.type} onChange={(e) => setEditForm((f) => ({ ...f, type: e.target.value as "blog" | "photos" | "other" }))}
+                            <select value={editForm.type} onChange={(e) => setEditForm((f) => ({ ...f, type: e.target.value as "blog" }))}
                               className="w-full px-2 py-1.5 border border-border rounded text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring">
                               <option value="blog">Blog post</option>
                               <option value="photos">Photo dump</option>

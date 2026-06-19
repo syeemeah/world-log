@@ -34,6 +34,41 @@ router.post("/auth/login", async (req: Request, res: Response) => {
   res.json({ token, username: user.username, role: user.role });
 });
 
+// ── Public registration ──────────────────────────────────────────────────────
+
+router.post("/auth/register", async (req: Request, res: Response) => {
+  const { username, password } = req.body as { username?: string; password?: string };
+  if (!username || !password) {
+    res.status(400).json({ error: "Username and password are required" });
+    return;
+  }
+  if (username.trim().length < 3) {
+    res.status(400).json({ error: "Username must be at least 3 characters" });
+    return;
+  }
+  if (password.length < 6) {
+    res.status(400).json({ error: "Password must be at least 6 characters" });
+    return;
+  }
+
+  const existing = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.username, username.trim()));
+  if (existing.length > 0) {
+    res.status(409).json({ error: "Username already taken" });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  const [user] = await db.insert(usersTable).values({
+    username: username.trim(),
+    passwordHash,
+    role: "editor",
+  }).returning({ id: usersTable.id, username: usersTable.username, role: usersTable.role });
+
+  const payload = { id: user.id, username: user.username, role: user.role };
+  const token = Buffer.from(JSON.stringify(payload)).toString("base64url") + "." + passwordHash.slice(-8);
+  res.status(201).json({ token, username: user.username, role: user.role });
+});
+
 // ── User management (admin only) ────────────────────────────────────────────
 
 router.get("/auth/users", requireAuth, requireAdmin, async (_req: Request, res: Response) => {
@@ -106,10 +141,7 @@ router.delete("/auth/users/:id", requireAuth, requireAdmin, async (req: Request,
 // ── Middleware ───────────────────────────────────────────────────────────────
 
 export interface AuthUser { id: number; username: string; role: "admin" | "editor" }
-
-declare module "express-serve-static-core" {
-  interface Request { authUser?: AuthUser }
-}
+export interface AuthRequest extends Request { authUser: AuthUser }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const raw = req.headers["authorization"];
@@ -127,7 +159,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     const actualTail = token.split(".")[1];
     if (actualTail !== expectedTail) throw new Error("token mismatch");
 
-    req.authUser = { id: user.id, username: user.username, role: user.role as "admin" | "editor" };
+    (req as AuthRequest).authUser = { id: user.id, username: user.username, role: user.role as "admin" | "editor" };
     next();
   } catch {
     res.status(401).json({ error: "Unauthorized" });
@@ -135,7 +167,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 }
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  if (req.authUser?.role !== "admin") {
+  if ((req as AuthRequest).authUser?.role !== "admin") {
     res.status(403).json({ error: "Admin access required" });
     return;
   }

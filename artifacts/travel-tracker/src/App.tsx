@@ -13,6 +13,7 @@ import Stats from "@/pages/stats";
 import Countries from "@/pages/countries";
 import Links from "@/pages/links";
 import Login from "@/pages/login";
+import Register from "@/pages/register";
 import Users from "@/pages/users";
 import NotFound from "@/pages/not-found";
 
@@ -37,17 +38,32 @@ function Router() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Nav />
+      {session && <Nav />}
       <main className="flex-1 overflow-y-auto">
         <Switch>
-          <Route path="/" component={Dashboard} />
-          <Route path="/timeline" component={Timeline} />
-          <Route path="/visits" component={Visits} />
-          <Route path="/stats" component={Stats} />
-          <Route path="/countries" component={Countries} />
-          <Route path="/links" component={Links} />
           <Route path="/login">
             {session ? <Redirect to="/" /> : <Login />}
+          </Route>
+          <Route path="/register">
+            {session ? <Redirect to="/" /> : <Register />}
+          </Route>
+          <Route path="/">
+            <ProtectedRoute component={Dashboard} />
+          </Route>
+          <Route path="/timeline">
+            <ProtectedRoute component={Timeline} />
+          </Route>
+          <Route path="/visits">
+            <ProtectedRoute component={Visits} />
+          </Route>
+          <Route path="/stats">
+            <ProtectedRoute component={Stats} />
+          </Route>
+          <Route path="/countries">
+            <ProtectedRoute component={Countries} />
+          </Route>
+          <Route path="/links">
+            <ProtectedRoute component={Links} />
           </Route>
           <Route path="/users">
             <AdminRoute component={Users} />

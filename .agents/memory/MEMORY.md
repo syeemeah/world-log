@@ -1,0 +1,1 @@
+- [Multi-tenancy data isolation](multi-tenancy.md) — userId FK added to all data tables; AuthRequest pattern used for TS since express-serve-static-core augmentation fails with "types":["node"] tsconfig

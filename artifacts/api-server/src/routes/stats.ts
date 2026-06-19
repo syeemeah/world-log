@@ -1,11 +1,13 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { db, visitsTable } from "@workspace/db";
-import { sql, desc, asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
+import { requireAuth, type AuthRequest } from "./auth";
 
 const router = Router();
 
-router.get("/stats/overview", async (_req, res) => {
-  const rows = await db.select().from(visitsTable);
+router.get("/stats/overview", requireAuth, async (req: Request, res: Response) => {
+  const userId = (req as AuthRequest).authUser.id;
+  const rows = await db.select().from(visitsTable).where(eq(visitsTable.userId, userId));
 
   const totalVisits = rows.length;
   const countries = new Set(rows.map((r) => r.country));
@@ -29,8 +31,9 @@ router.get("/stats/overview", async (_req, res) => {
   res.json({ totalVisits, totalCountries, totalCities, topCountry, firstVisit, latestVisit });
 });
 
-router.get("/stats/years", async (_req, res) => {
-  const rows = await db.select().from(visitsTable);
+router.get("/stats/years", requireAuth, async (req: Request, res: Response) => {
+  const userId = (req as AuthRequest).authUser.id;
+  const rows = await db.select().from(visitsTable).where(eq(visitsTable.userId, userId));
 
   const byYear: Record<number, typeof rows> = {};
   for (const r of rows) {
@@ -58,10 +61,12 @@ router.get("/stats/years", async (_req, res) => {
   res.json(summaries);
 });
 
-router.get("/stats/timeline", async (_req, res) => {
+router.get("/stats/timeline", requireAuth, async (req: Request, res: Response) => {
+  const userId = (req as AuthRequest).authUser.id;
   const rows = await db
     .select()
     .from(visitsTable)
+    .where(eq(visitsTable.userId, userId))
     .orderBy(asc(visitsTable.visitDate), asc(visitsTable.id));
 
   res.json(

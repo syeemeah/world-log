@@ -1,26 +1,33 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { db, countryMemoriesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
-import { requireAuth } from "./auth";
+import { eq, and } from "drizzle-orm";
+import { requireAuth, type AuthRequest } from "./auth";
 
 const router = Router();
 
-router.get("/memories", async (_req, res) => {
-  const rows = await db.select().from(countryMemoriesTable);
+router.get("/memories", requireAuth, async (req: Request, res: Response) => {
+  const userId = (req as AuthRequest).authUser.id;
+  const rows = await db.select().from(countryMemoriesTable).where(eq(countryMemoriesTable.userId, userId));
   res.json(rows.map(fmt));
 });
 
-router.get("/memories/:countryCode", async (req, res) => {
+router.get("/memories/:countryCode", requireAuth, async (req: Request, res: Response) => {
+  const userId = (req as AuthRequest).authUser.id;
+  const code = String(req.params.countryCode).toUpperCase();
   const [row] = await db
     .select()
     .from(countryMemoriesTable)
-    .where(eq(countryMemoriesTable.countryCode, req.params.countryCode.toUpperCase()));
+    .where(and(
+      eq(countryMemoriesTable.userId, userId),
+      eq(countryMemoriesTable.countryCode, code)
+    ));
   if (!row) { res.status(404).json({ error: "Not found" }); return; }
   res.json(fmt(row));
 });
 
-router.put("/memories/:countryCode", requireAuth, async (req, res) => {
-  const code = req.params.countryCode.toUpperCase();
+router.put("/memories/:countryCode", requireAuth, async (req: Request, res: Response) => {
+  const code = String(req.params.countryCode).toUpperCase();
+  const userId = (req as AuthRequest).authUser.id;
   const { bestMemory, bestPhotoBase64, bestPhotoMime, country } = req.body as {
     bestMemory?: string | null;
     bestPhotoBase64?: string | null;
@@ -34,27 +41,46 @@ router.put("/memories/:countryCode", requireAuth, async (req, res) => {
     const [visit] = await db
       .select({ country: visitsTable.country })
       .from(visitsTable)
-      .where(eq(visitsTable.countryCode, code))
+      .where(and(eq(visitsTable.userId, userId), eq(visitsTable.countryCode, code)))
       .limit(1);
     countryName = visit?.country ?? code;
   }
 
   const [row] = await db
     .insert(countryMemoriesTable)
-    .values({ countryCode: code, country: countryName, bestMemory: bestMemory ?? null, bestPhotoBase64: bestPhotoBase64 ?? null, bestPhotoMime: bestPhotoMime ?? null, updatedAt: new Date() })
+    .values({
+      userId,
+      countryCode: code,
+      country: countryName,
+      bestMemory: bestMemory ?? null,
+      bestPhotoBase64: bestPhotoBase64 ?? null,
+      bestPhotoMime: bestPhotoMime ?? null,
+      updatedAt: new Date(),
+    })
     .onConflictDoUpdate({
-      target: countryMemoriesTable.countryCode,
-      set: { bestMemory: bestMemory ?? null, bestPhotoBase64: bestPhotoBase64 ?? null, bestPhotoMime: bestPhotoMime ?? null, updatedAt: new Date(), ...(countryName ? { country: countryName } : {}) },
+      target: [countryMemoriesTable.userId, countryMemoriesTable.countryCode],
+      set: {
+        bestMemory: bestMemory ?? null,
+        bestPhotoBase64: bestPhotoBase64 ?? null,
+        bestPhotoMime: bestPhotoMime ?? null,
+        updatedAt: new Date(),
+        ...(countryName ? { country: countryName } : {}),
+      },
     })
     .returning();
 
   res.json(fmt(row));
 });
 
-router.delete("/memories/:countryCode", requireAuth, async (req, res) => {
+router.delete("/memories/:countryCode", requireAuth, async (req: Request, res: Response) => {
+  const userId = (req as AuthRequest).authUser.id;
+  const code = String(req.params.countryCode).toUpperCase();
   const [deleted] = await db
     .delete(countryMemoriesTable)
-    .where(eq(countryMemoriesTable.countryCode, req.params.countryCode.toUpperCase()))
+    .where(and(
+      eq(countryMemoriesTable.userId, userId),
+      eq(countryMemoriesTable.countryCode, code)
+    ))
     .returning();
   if (!deleted) { res.status(404).json({ error: "Not found" }); return; }
   res.status(204).send();
