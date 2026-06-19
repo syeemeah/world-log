@@ -25,7 +25,10 @@ async function searchCities(query: string, country: string): Promise<CitySuggest
     const q = encodeURIComponent(query);
     const c = encodeURIComponent(country);
     const url = `https://nominatim.openstreetmap.org/search?q=${q}&countrycodes=${c}&format=json&limit=6&addressdetails=1&featuretype=city`;
-    const res = await fetch(url, { headers: { "Accept-Language": "en" } });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(url, { headers: { "Accept-Language": "en" }, signal: controller.signal });
+    clearTimeout(timer);
     const data: Array<{
       display_name: string;
       lat: string;
