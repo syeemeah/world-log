@@ -3,7 +3,7 @@ import { usersTable } from "./users";
 
 export const countryMemoriesTable = pgTable("country_memories", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }).default(1),
+  userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   countryCode: text("country_code").notNull(),
   country: text("country").notNull(),
   bestMemory: text("best_memory"),

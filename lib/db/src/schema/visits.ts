@@ -5,7 +5,7 @@ import { usersTable } from "./users";
 
 export const visitsTable = pgTable("visits", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }).default(1),
+  userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   country: text("country").notNull(),
   countryCode: text("country_code").notNull(),
   city: text("city").notNull(),

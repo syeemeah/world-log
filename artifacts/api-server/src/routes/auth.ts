@@ -149,14 +149,18 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   if (!token) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   try {
-    const [payloadB64] = token.split(".");
+    // Split on the FIRST dot only. The payload is base64url (never contains "."),
+    // but the tail is the last 8 chars of a bcrypt hash whose alphabet includes ".".
+    const dotIdx = token.indexOf(".");
+    if (dotIdx === -1) throw new Error("bad token");
+    const payloadB64 = token.slice(0, dotIdx);
+    const actualTail = token.slice(dotIdx + 1);
     const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString()) as AuthUser;
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, payload.id));
     if (!user) throw new Error("no user");
 
     // Verify the tail matches the current password hash (invalidates token on password change)
     const expectedTail = user.passwordHash.slice(-8);
-    const actualTail = token.split(".")[1];
     if (actualTail !== expectedTail) throw new Error("token mismatch");
 
     (req as AuthRequest).authUser = { id: user.id, username: user.username, role: user.role as "admin" | "editor" };

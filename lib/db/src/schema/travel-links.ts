@@ -3,7 +3,7 @@ import { usersTable } from "./users";
 
 export const travelLinksTable = pgTable("travel_links", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }).default(1),
+  userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   year: integer("year").notNull(),
   title: text("title").notNull(),
   url: text("url").notNull(),

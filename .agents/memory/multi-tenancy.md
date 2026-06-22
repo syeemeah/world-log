@@ -3,7 +3,9 @@ name: Multi-tenancy data isolation
 description: How per-user data scoping is implemented and the TS pattern used for auth middleware
 ---
 
-All data tables (visits, travel_links, country_memories) have a `user_id` FK to `users` with `.default(1)` so existing rows got admin's ID when column was added.
+All data tables (visits, travel_links, country_memories, year_journals) have a `user_id` FK to `users`. Every read/write route filters `where(eq(table.userId, authUser.id))` and every insert passes an explicit `userId`. New users register as role `editor` and get full access (only `/users` admin page is gated).
+
+**No DB default on userId:** Do NOT put `.default(1)` on `userId`. It was removed from visits/travel_links/country_memories. If an insert ever omits userId, a default silently attaches that row to user #1 — a cross-account data leak. Always pass userId explicitly.
 
 **AuthRequest pattern:**
 `express-serve-static-core` module augmentation fails with `"types": ["node"]` in tsconfig. Fix: export `AuthRequest extends Request { authUser: AuthUser }` from `auth.ts`, cast in every route handler: `(req as AuthRequest).authUser.id`.

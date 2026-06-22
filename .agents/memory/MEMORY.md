@@ -1,1 +1,2 @@
-- [Multi-tenancy data isolation](multi-tenancy.md) — userId FK added to all data tables; AuthRequest pattern used for TS since express-serve-static-core augmentation fails with "types":["node"] tsconfig
+- [Stateless auth token format](auth-token-format.md) — travel-tracker token tail is a bcrypt slice that can contain "."; parse on the FIRST dot only or ~22% of users get random 401s.
+- [Multi-tenancy data isolation](multi-tenancy.md) — per-user FK scoping, AuthRequest cast pattern, no DB default on userId, registration flow.
