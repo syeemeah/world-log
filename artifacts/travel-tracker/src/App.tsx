@@ -1,4 +1,5 @@
-import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -38,12 +39,23 @@ function AdminRoute({ component: Component }: { component: React.ComponentType }
 
 function Router() {
   const { session } = useAuth();
+  const [location] = useLocation();
+  const reduce = useReducedMotion();
 
   return (
     <div className="flex h-screen overflow-hidden">
       {session && <Nav />}
       <main className="flex-1 overflow-y-auto">
-        <Switch>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={location}
+            className="h-full"
+            initial={reduce ? false : { opacity: 0, y: 10 }}
+            animate={reduce ? undefined : { opacity: 1, y: 0 }}
+            exit={reduce ? undefined : { opacity: 0, y: -10 }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <Switch location={location}>
           <Route path="/login">
             {session ? <Redirect to="/" /> : <Login />}
           </Route>
@@ -84,7 +96,9 @@ function Router() {
             <ProtectedRoute component={EditVisit} />
           </Route>
           <Route component={NotFound} />
-        </Switch>
+            </Switch>
+          </motion.div>
+        </AnimatePresence>
       </main>
     </div>
   );

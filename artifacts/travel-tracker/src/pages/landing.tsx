@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { Globe, Map, BookOpen, BarChart2, Camera, MapPin, ArrowRight, Check, Link2 } from "lucide-react";
+import { Reveal, RevealGroup, RevealItem } from "@/components/reveal";
 
 const CYAN = "#22d3ee";
 const BLUE = "#3b82f6";
@@ -322,6 +323,7 @@ export default function Landing() {
       <div className="relative max-w-5xl mx-auto px-6">
         {/* Hero */}
         <section className="pt-20 pb-16 text-center">
+          <Reveal y={16}>
           <div
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono mb-6"
             style={{
@@ -372,55 +374,61 @@ export default function Landing() {
               Sign in
             </Link>
           </div>
+          </Reveal>
         </section>
 
         {/* Interactive demo */}
         <section className="pb-20">
-          <InteractiveDemo />
+          <Reveal>
+            <InteractiveDemo />
+          </Reveal>
         </section>
 
         {/* Features */}
         <section className="pb-20">
-          <p className="text-center font-mono text-xs mb-2" style={{ color: CYAN, letterSpacing: "0.12em" }}>
-            ◈ CAPABILITIES
-          </p>
-          <h2 className="text-2xl font-bold text-center mb-2" style={{ color: "#fff" }}>
-            Everything your travels deserve
-          </h2>
-          <p className="text-sm text-center mb-10" style={{ color: MUTED }}>Built for people who love exploring and remembering.</p>
-          <div className="grid grid-cols-2 gap-4">
+          <Reveal>
+            <p className="text-center font-mono text-xs mb-2" style={{ color: CYAN, letterSpacing: "0.12em" }}>
+              ◈ CAPABILITIES
+            </p>
+            <h2 className="text-2xl font-bold text-center mb-2" style={{ color: "#fff" }}>
+              Everything your travels deserve
+            </h2>
+            <p className="text-sm text-center mb-10" style={{ color: MUTED }}>Built for people who love exploring and remembering.</p>
+          </Reveal>
+          <RevealGroup className="grid grid-cols-2 gap-4">
             {FEATURES.map((f) => {
               const Icon = f.icon;
               return (
-                <div
-                  key={f.title}
-                  className="rounded-2xl p-6 transition-colors"
-                  style={{
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.07)",
-                  }}
-                >
+                <RevealItem key={f.title}>
                   <div
-                    className="inline-flex items-center justify-center w-10 h-10 rounded-xl mb-4"
+                    className="h-full rounded-2xl p-6 transition-colors"
                     style={{
-                      background: `${f.color}18`,
-                      border: `1px solid ${f.color}40`,
-                      boxShadow: `0 0 20px ${f.color}20`,
+                      background: "rgba(255,255,255,0.02)",
+                      border: "1px solid rgba(255,255,255,0.07)",
                     }}
                   >
-                    <Icon className="w-5 h-5" style={{ color: f.color }} />
+                    <div
+                      className="inline-flex items-center justify-center w-10 h-10 rounded-xl mb-4"
+                      style={{
+                        background: `${f.color}18`,
+                        border: `1px solid ${f.color}40`,
+                        boxShadow: `0 0 20px ${f.color}20`,
+                      }}
+                    >
+                      <Icon className="w-5 h-5" style={{ color: f.color }} />
+                    </div>
+                    <h3 className="font-semibold mb-1.5" style={{ color: "#fff" }}>{f.title}</h3>
+                    <p className="text-sm leading-relaxed" style={{ color: MUTED }}>{f.desc}</p>
                   </div>
-                  <h3 className="font-semibold mb-1.5" style={{ color: "#fff" }}>{f.title}</h3>
-                  <p className="text-sm leading-relaxed" style={{ color: MUTED }}>{f.desc}</p>
-                </div>
+                </RevealItem>
               );
             })}
-          </div>
+          </RevealGroup>
         </section>
 
         {/* Split: bullets + year cards */}
         <section className="pb-20 grid grid-cols-2 gap-12 items-center">
-          <div>
+          <Reveal>
             <p className="font-mono text-xs mb-2" style={{ color: CYAN, letterSpacing: "0.12em" }}>◈ FEATURES</p>
             <h2 className="text-2xl font-bold mb-3" style={{ color: "#fff" }}>
               Your history,{" "}
@@ -442,17 +450,18 @@ export default function Landing() {
                 </li>
               ))}
             </ul>
-          </div>
-          <div className="space-y-2">
-            <YearCard year={2024} countries={6} cities={14} hasLink />
-            <YearCard year={2023} countries={4} cities={9} hasLink />
-            <YearCard year={2022} countries={3} cities={7} />
-            <YearCard year={2019} countries={8} cities={22} hasLink />
-          </div>
+          </Reveal>
+          <RevealGroup className="space-y-2">
+            <RevealItem><YearCard year={2024} countries={6} cities={14} hasLink /></RevealItem>
+            <RevealItem><YearCard year={2023} countries={4} cities={9} hasLink /></RevealItem>
+            <RevealItem><YearCard year={2022} countries={3} cities={7} /></RevealItem>
+            <RevealItem><YearCard year={2019} countries={8} cities={22} hasLink /></RevealItem>
+          </RevealGroup>
         </section>
 
         {/* CTA */}
         <section className="pb-20">
+          <Reveal>
           <div
             className="rounded-3xl px-10 py-14 text-center relative overflow-hidden"
             style={{
@@ -486,6 +495,7 @@ export default function Landing() {
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
+          </Reveal>
         </section>
       </div>
     </div>
