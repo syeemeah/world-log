@@ -20,6 +20,9 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  BucketListItem,
+  BucketListItemInput,
+  BucketListItemUpdate,
   CountryMemory,
   CountryMemoryInput,
   ErrorResponse,
@@ -1022,4 +1025,294 @@ export function useGetTimeline<TData = Awaited<ReturnType<typeof getTimeline>>, 
 
 
 
+
+export const getListBucketListUrl = () => {
+
+
+
+
+  return `/api/bucket-list`
+}
+
+/**
+ * @summary List all bucket list goals
+ */
+export const listBucketList = async ( options?: RequestInit): Promise<BucketListItem[]> => {
+
+  return customFetch<BucketListItem[]>(getListBucketListUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBucketListQueryKey = () => {
+    return [
+    `/api/bucket-list`
+    ] as const;
+    }
+
+
+export const getListBucketListQueryOptions = <TData = Awaited<ReturnType<typeof listBucketList>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBucketList>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBucketListQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBucketList>>> = ({ signal }) => listBucketList({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBucketList>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBucketListQueryResult = NonNullable<Awaited<ReturnType<typeof listBucketList>>>
+export type ListBucketListQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all bucket list goals
+ */
+
+export function useListBucketList<TData = Awaited<ReturnType<typeof listBucketList>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBucketList>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBucketListQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateBucketListItemUrl = () => {
+
+
+
+
+  return `/api/bucket-list`
+}
+
+/**
+ * @summary Add a bucket list goal
+ */
+export const createBucketListItem = async (bucketListItemInput: BucketListItemInput, options?: RequestInit): Promise<BucketListItem> => {
+
+  return customFetch<BucketListItem>(getCreateBucketListItemUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      bucketListItemInput,)
+  }
+);}
+
+
+
+
+export const getCreateBucketListItemMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBucketListItem>>, TError,{data: BodyType<BucketListItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBucketListItem>>, TError,{data: BodyType<BucketListItemInput>}, TContext> => {
+
+const mutationKey = ['createBucketListItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBucketListItem>>, {data: BodyType<BucketListItemInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createBucketListItem(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBucketListItemMutationResult = NonNullable<Awaited<ReturnType<typeof createBucketListItem>>>
+    export type CreateBucketListItemMutationBody = BodyType<BucketListItemInput>
+    export type CreateBucketListItemMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Add a bucket list goal
+ */
+export const useCreateBucketListItem = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBucketListItem>>, TError,{data: BodyType<BucketListItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBucketListItem>>,
+        TError,
+        {data: BodyType<BucketListItemInput>},
+        TContext
+      > => {
+      return useMutation(getCreateBucketListItemMutationOptions(options));
+    }
+
+export const getUpdateBucketListItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/bucket-list/${id}`
+}
+
+/**
+ * @summary Update a bucket list goal
+ */
+export const updateBucketListItem = async (id: number,
+    bucketListItemUpdate: BucketListItemUpdate, options?: RequestInit): Promise<BucketListItem> => {
+
+  return customFetch<BucketListItem>(getUpdateBucketListItemUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      bucketListItemUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateBucketListItemMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBucketListItem>>, TError,{id: number;data: BodyType<BucketListItemUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateBucketListItem>>, TError,{id: number;data: BodyType<BucketListItemUpdate>}, TContext> => {
+
+const mutationKey = ['updateBucketListItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateBucketListItem>>, {id: number;data: BodyType<BucketListItemUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateBucketListItem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateBucketListItemMutationResult = NonNullable<Awaited<ReturnType<typeof updateBucketListItem>>>
+    export type UpdateBucketListItemMutationBody = BodyType<BucketListItemUpdate>
+    export type UpdateBucketListItemMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Update a bucket list goal
+ */
+export const useUpdateBucketListItem = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBucketListItem>>, TError,{id: number;data: BodyType<BucketListItemUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateBucketListItem>>,
+        TError,
+        {id: number;data: BodyType<BucketListItemUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateBucketListItemMutationOptions(options));
+    }
+
+export const getDeleteBucketListItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/bucket-list/${id}`
+}
+
+/**
+ * @summary Delete a bucket list goal
+ */
+export const deleteBucketListItem = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteBucketListItemUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteBucketListItemMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBucketListItem>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteBucketListItem>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteBucketListItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteBucketListItem>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteBucketListItem(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteBucketListItemMutationResult = NonNullable<Awaited<ReturnType<typeof deleteBucketListItem>>>
+
+    export type DeleteBucketListItemMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Delete a bucket list goal
+ */
+export const useDeleteBucketListItem = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBucketListItem>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteBucketListItem>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteBucketListItemMutationOptions(options));
+    }
 

@@ -1,9 +1,10 @@
 import { Link, useLocation } from "wouter";
-import { Globe, Clock, Map, PlusCircle, BarChart2, FlagTriangleRight, LogIn, LogOut, Users, BookOpen, LifeBuoy, MessageSquare } from "lucide-react";
+import { Globe, Clock, Map, PlusCircle, BarChart2, FlagTriangleRight, LogIn, LogOut, Users, BookOpen, LifeBuoy, MessageSquare, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 
 const publicLinks = [
+  { href: "/home", label: "Home", icon: Home },
   { href: "/", label: "World Map", icon: Globe },
   { href: "/timeline", label: "Timeline", icon: Clock },
   { href: "/visits", label: "All Visits", icon: Map },

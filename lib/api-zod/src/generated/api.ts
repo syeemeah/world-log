@@ -234,3 +234,83 @@ export const GetTimelineResponseItem = zod.object({
 export const GetTimelineResponse = zod.array(GetTimelineResponseItem)
 
 
+/**
+ * @summary List all bucket list goals
+ */
+export const ListBucketListResponseItem = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "country": zod.string().nullish(),
+  "countryCode": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "priority": zod.enum(['low', 'medium', 'high']),
+  "targetYear": zod.number().nullish(),
+  "achieved": zod.boolean(),
+  "achievedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListBucketListResponse = zod.array(ListBucketListResponseItem)
+
+
+/**
+ * @summary Add a bucket list goal
+ */
+
+
+
+export const CreateBucketListItemBody = zod.object({
+  "title": zod.string().min(1),
+  "country": zod.string().nullish(),
+  "countryCode": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "priority": zod.enum(['low', 'medium', 'high']).optional(),
+  "targetYear": zod.number().nullish()
+})
+
+
+/**
+ * @summary Update a bucket list goal
+ */
+export const UpdateBucketListItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateBucketListItemBody = zod.object({
+  "title": zod.string().min(1).optional(),
+  "country": zod.string().nullish(),
+  "countryCode": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "priority": zod.enum(['low', 'medium', 'high']).optional(),
+  "targetYear": zod.number().nullish(),
+  "achieved": zod.boolean().optional()
+})
+
+export const UpdateBucketListItemResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "country": zod.string().nullish(),
+  "countryCode": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "priority": zod.enum(['low', 'medium', 'high']),
+  "targetYear": zod.number().nullish(),
+  "achieved": zod.boolean(),
+  "achievedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a bucket list goal
+ */
+export const DeleteBucketListItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+

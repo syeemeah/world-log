@@ -6,6 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './bucketListItem';
+export * from './bucketListItemInput';
+export * from './bucketListItemInputPriority';
+export * from './bucketListItemPriority';
+export * from './bucketListItemUpdate';
+export * from './bucketListItemUpdatePriority';
 export * from './countryMemory';
 export * from './countryMemoryInput';
 export * from './errorResponse';

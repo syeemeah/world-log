@@ -6,6 +6,7 @@ import memoriesRouter from "./memories";
 import authRouter from "./auth";
 import journalRouter from "./journal";
 import feedbackRouter from "./feedback";
+import bucketListRouter from "./bucket-list";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(statsRouter);
 router.use(memoriesRouter);
 router.use(journalRouter);
 router.use(feedbackRouter);
+router.use(bucketListRouter);
 
 export default router;

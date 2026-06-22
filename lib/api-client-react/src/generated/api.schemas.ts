@@ -99,6 +99,86 @@ export interface CountryMemoryInput {
   bestPhotoMime?: string | null;
 }
 
+export type BucketListItemPriority = typeof BucketListItemPriority[keyof typeof BucketListItemPriority];
+
+
+export const BucketListItemPriority = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+} as const;
+
+export interface BucketListItem {
+  id: number;
+  title: string;
+  /** @nullable */
+  country?: string | null;
+  /** @nullable */
+  countryCode?: string | null;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  priority: BucketListItemPriority;
+  /** @nullable */
+  targetYear?: number | null;
+  achieved: boolean;
+  /** @nullable */
+  achievedAt?: string | null;
+  createdAt: string;
+}
+
+export type BucketListItemInputPriority = typeof BucketListItemInputPriority[keyof typeof BucketListItemInputPriority];
+
+
+export const BucketListItemInputPriority = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+} as const;
+
+export interface BucketListItemInput {
+  /** @minLength 1 */
+  title: string;
+  /** @nullable */
+  country?: string | null;
+  /** @nullable */
+  countryCode?: string | null;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  priority?: BucketListItemInputPriority;
+  /** @nullable */
+  targetYear?: number | null;
+}
+
+export type BucketListItemUpdatePriority = typeof BucketListItemUpdatePriority[keyof typeof BucketListItemUpdatePriority];
+
+
+export const BucketListItemUpdatePriority = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+} as const;
+
+export interface BucketListItemUpdate {
+  /** @minLength 1 */
+  title?: string;
+  /** @nullable */
+  country?: string | null;
+  /** @nullable */
+  countryCode?: string | null;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  priority?: BucketListItemUpdatePriority;
+  /** @nullable */
+  targetYear?: number | null;
+  achieved?: boolean;
+}
+
 export interface ErrorResponse {
   error: string;
 }

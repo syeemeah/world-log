@@ -278,6 +278,94 @@ paths:
                 items:
                   $ref: "#/components/schemas/Visit"
 
+  /bucket-list:
+    get:
+      operationId: listBucketList
+      tags: [bucketList]
+      summary: List all bucket list goals
+      responses:
+        "200":
+          description: List of bucket list goals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BucketListItem"
+    post:
+      operationId: createBucketListItem
+      tags: [bucketList]
+      summary: Add a bucket list goal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BucketListItemInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BucketListItem"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bucket-list/{id}:
+    patch:
+      operationId: updateBucketListItem
+      tags: [bucketList]
+      summary: Update a bucket list goal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BucketListItemUpdate"
+      responses:
+        "200":
+          description: Updated goal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BucketListItem"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteBucketListItem
+      tags: [bucketList]
+      summary: Delete a bucket list goal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted successfully
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -430,6 +518,79 @@ components:
           type: ["string", "null"]
         bestPhotoMime:
           type: ["string", "null"]
+
+    BucketListItem:
+      type: object
+      required: [id, title, priority, achieved, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        country:
+          type: ["string", "null"]
+        countryCode:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        priority:
+          type: string
+          enum: [low, medium, high]
+        targetYear:
+          type: ["integer", "null"]
+        achieved:
+          type: boolean
+        achievedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    BucketListItemInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        country:
+          type: ["string", "null"]
+        countryCode:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        priority:
+          type: string
+          enum: [low, medium, high]
+        targetYear:
+          type: ["integer", "null"]
+
+    BucketListItemUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        country:
+          type: ["string", "null"]
+        countryCode:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        priority:
+          type: string
+          enum: [low, medium, high]
+        targetYear:
+          type: ["integer", "null"]
+        achieved:
+          type: boolean
 
     ErrorResponse:
       type: object

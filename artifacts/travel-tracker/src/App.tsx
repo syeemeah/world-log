@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import Nav from "@/components/nav";
 import Dashboard from "@/pages/dashboard";
+import Home from "@/pages/home";
 import Timeline from "@/pages/timeline";
 import Visits from "@/pages/visits";
 import NewVisit from "@/pages/new-visit";
@@ -64,6 +65,9 @@ function Router() {
           </Route>
           <Route path="/">
             {session ? <Dashboard /> : <Landing />}
+          </Route>
+          <Route path="/home">
+            <ProtectedRoute component={Home} />
           </Route>
           <Route path="/timeline">
             <ProtectedRoute component={Timeline} />
