@@ -22,11 +22,23 @@ export default function Nav() {
     <aside className="w-56 flex-shrink-0 flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
       {/* Logo */}
       <div className="px-5 py-6 border-b border-sidebar-border">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-full bg-sidebar-primary flex items-center justify-center">
-            <Globe className="w-4 h-4 text-sidebar-primary-foreground" />
+        <div className="flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-full bg-sidebar-primary flex items-center justify-center">
+              <Globe className="w-4 h-4 text-sidebar-primary-foreground" />
+            </div>
+            <span className="font-semibold text-base tracking-tight text-white">World Log</span>
           </div>
-          <span className="font-semibold text-base tracking-tight text-white">World Log</span>
+          {session && (
+            <button
+              onClick={logout}
+              title="Sign out"
+              aria-label="Sign out"
+              className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-md text-sidebar-foreground/60 hover:text-white hover:bg-sidebar-accent/60 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
         </div>
         {session ? (
           <p className="text-xs text-sidebar-foreground/50 mt-1.5 pl-9">
