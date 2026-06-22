@@ -12,6 +12,8 @@ import EditVisit from "@/pages/edit-visit";
 import Stats from "@/pages/stats";
 import Countries from "@/pages/countries";
 import Links from "@/pages/links";
+import Feedback from "@/pages/feedback";
+import Troubleshoot from "@/pages/troubleshoot";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Landing from "@/pages/landing";
@@ -65,6 +67,12 @@ function Router() {
           </Route>
           <Route path="/links">
             <ProtectedRoute component={Links} />
+          </Route>
+          <Route path="/troubleshoot">
+            <ProtectedRoute component={Troubleshoot} />
+          </Route>
+          <Route path="/feedback">
+            <ProtectedRoute component={Feedback} />
           </Route>
           <Route path="/users">
             <AdminRoute component={Users} />

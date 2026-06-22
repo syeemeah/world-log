@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Globe, Clock, Map, PlusCircle, BarChart2, FlagTriangleRight, LogIn, LogOut, Users, BookOpen } from "lucide-react";
+import { Globe, Clock, Map, PlusCircle, BarChart2, FlagTriangleRight, LogIn, LogOut, Users, BookOpen, LifeBuoy, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -10,6 +10,8 @@ const publicLinks = [
   { href: "/countries", label: "Countries", icon: FlagTriangleRight },
   { href: "/stats", label: "By Year", icon: BarChart2 },
   { href: "/links", label: "Travel Journal", icon: BookOpen },
+  { href: "/troubleshoot", label: "Troubleshooting", icon: LifeBuoy },
+  { href: "/feedback", label: "Feedback", icon: MessageSquare },
 ];
 
 export default function Nav() {
