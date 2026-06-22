@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { Globe, Map, BookOpen, BarChart2, Camera, MapPin, ArrowRight, Check, Link2 } from "lucide-react";
 
 const CYAN = "#22d3ee";
 const BLUE = "#3b82f6";
+const MUTED_LANDING = "rgba(255,255,255,0.45)";
 
 const FEATURES = [
   { icon: Map,      color: CYAN,   title: "Interactive World Map",   desc: "Every city you've visited pinned on a live map. Zoom, explore, relive your routes." },
@@ -43,105 +45,186 @@ function GlowDot({ cx, cy, r = 3, color = CYAN }: { cx: number; cy: number; r?: 
   );
 }
 
-function MapMockup() {
-  const pins: [number, number][] = [
-    [20, 37], [30, 34], [49, 33], [55, 32], [58, 45],
-    [62, 37], [72, 39], [78, 54], [83, 34],
-  ];
+interface Dest {
+  id: string;
+  city: string;
+  country: string;
+  x: number;
+  y: number;
+}
+
+// Sample destinations positioned on the 800x450 stylized world
+const DESTINATIONS: Dest[] = [
+  { id: "nyc", city: "New York", country: "USA", x: 150, y: 175 },
+  { id: "mex", city: "Mexico City", country: "Mexico", x: 178, y: 238 },
+  { id: "rio", city: "Rio", country: "Brazil", x: 250, y: 330 },
+  { id: "lon", city: "London", country: "UK", x: 405, y: 128 },
+  { id: "par", city: "Paris", country: "France", x: 425, y: 148 },
+  { id: "cai", city: "Cairo", country: "Egypt", x: 442, y: 248 },
+  { id: "cpt", city: "Cape Town", country: "South Africa", x: 418, y: 332 },
+  { id: "tok", city: "Tokyo", country: "Japan", x: 662, y: 172 },
+  { id: "bkk", city: "Bangkok", country: "Thailand", x: 600, y: 232 },
+  { id: "syd", city: "Sydney", country: "Australia", x: 682, y: 345 },
+];
+
+function InteractiveDemo() {
+  const [selected, setSelected] = useState<string[]>(["par", "tok", "nyc"]);
+
+  const toggle = (id: string) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const chosen = selected
+    .map((id) => DESTINATIONS.find((d) => d.id === id))
+    .filter((d): d is Dest => Boolean(d));
+
+  const cities = chosen.length;
+  const countries = new Set(chosen.map((d) => d.country)).size;
+  const routeD = chosen.map((d, i) => `${i === 0 ? "M" : "L"}${d.x},${d.y}`).join(" ");
 
   return (
-    <div
-      className="relative w-full rounded-2xl overflow-hidden"
-      style={{
-        aspectRatio: "16/9",
-        background: "#0a1628",
-        border: `1px solid rgba(34,211,238,0.2)`,
-        boxShadow: `0 0 60px rgba(34,211,238,0.08), inset 0 0 60px rgba(0,0,0,0.4)`,
-      }}
-    >
-      {/* Grid overlay */}
+    <div>
       <div
-        className="absolute inset-0"
+        className="relative w-full rounded-2xl overflow-hidden"
         style={{
-          backgroundImage: `
-            linear-gradient(rgba(34,211,238,0.06) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(34,211,238,0.06) 1px, transparent 1px)
-          `,
-          backgroundSize: "40px 40px",
-        }}
-      />
-
-      {/* Continent SVG */}
-      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice">
-        <defs>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="4" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-        </defs>
-        {/* Continents — dark teal tones */}
-        <ellipse cx="160" cy="160" rx="110" ry="90"  fill="#0f2d3d" stroke="rgba(34,211,238,0.15)" strokeWidth="1" />
-        <ellipse cx="190" cy="230" rx="60"  ry="50"  fill="#0f2d3d" stroke="rgba(34,211,238,0.15)" strokeWidth="1" />
-        <ellipse cx="230" cy="310" rx="60"  ry="90"  fill="#0f2d3d" stroke="rgba(34,211,238,0.15)" strokeWidth="1" />
-        <ellipse cx="420" cy="140" rx="55"  ry="45"  fill="#0f2d3d" stroke="rgba(34,211,238,0.15)" strokeWidth="1" />
-        <ellipse cx="420" cy="270" rx="65"  ry="90"  fill="#0f2d3d" stroke="rgba(34,211,238,0.15)" strokeWidth="1" />
-        <ellipse cx="590" cy="160" rx="130" ry="75"  fill="#0f2d3d" stroke="rgba(34,211,238,0.15)" strokeWidth="1" />
-        <ellipse cx="660" cy="330" rx="65"  ry="45"  fill="#0f2d3d" stroke="rgba(34,211,238,0.15)" strokeWidth="1" />
-        <ellipse cx="300" cy="80"  rx="45"  ry="35"  fill="#0a2030" stroke="rgba(34,211,238,0.1)"  strokeWidth="1" />
-
-        {/* Route lines between pins */}
-        {pins.slice(1).map(([x2, y2], i) => {
-          const [x1, y1] = pins[i];
-          const bx = (x1 + x2) / 2 * 8;
-          const by = (y1 + y2) / 2 * 4.5 - 40;
-          return (
-            <path
-              key={i}
-              d={`M${x1 * 8},${y1 * 4.5} Q${bx},${by} ${x2 * 8},${y2 * 4.5}`}
-              fill="none"
-              stroke={CYAN}
-              strokeWidth="0.8"
-              strokeDasharray="4 4"
-              opacity="0.3"
-            />
-          );
-        })}
-
-        {/* Pins */}
-        {pins.map(([x, y], i) => (
-          <GlowDot key={i} cx={x * 8} cy={y * 4.5} r={i === pins.length - 1 ? 5 : 3} color={i === pins.length - 1 ? "#f59e0b" : CYAN} />
-        ))}
-      </svg>
-
-      {/* Stats overlay */}
-      <div
-        className="absolute bottom-4 left-4 rounded-xl px-4 py-3"
-        style={{
-          background: "rgba(3,11,26,0.85)",
-          border: "1px solid rgba(34,211,238,0.2)",
-          backdropFilter: "blur(12px)",
-          boxShadow: "0 0 20px rgba(34,211,238,0.1)",
+          aspectRatio: "16/9",
+          background: "#0a1628",
+          border: `1px solid rgba(34,211,238,0.2)`,
+          boxShadow: `0 0 60px rgba(34,211,238,0.08), inset 0 0 60px rgba(0,0,0,0.4)`,
         }}
       >
-        <p style={{ fontSize: 10, color: CYAN, letterSpacing: "0.1em", fontFamily: "monospace" }} className="uppercase mb-2">
-          ∷ LIFETIME STATS
-        </p>
-        <div className="flex items-center gap-5">
-          {[["42", "countries"], ["180", "cities"], ["12", "years"]].map(([n, l], i) => (
-            <div key={i} className="text-center">
-              <p style={{ fontFamily: "monospace", color: CYAN, fontSize: 22, fontWeight: 700, lineHeight: 1 }}>{n}</p>
-              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>{l}</p>
-            </div>
-          ))}
+        {/* Grid overlay */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `
+              linear-gradient(rgba(34,211,238,0.06) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(34,211,238,0.06) 1px, transparent 1px)
+            `,
+            backgroundSize: "40px 40px",
+          }}
+        />
+
+        {/* Live demo badge */}
+        <div
+          className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+          style={{ background: "rgba(3,11,26,0.85)", border: "1px solid rgba(34,211,238,0.25)", backdropFilter: "blur(8px)" }}
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping" style={{ background: CYAN }} />
+            <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: CYAN }} />
+          </span>
+          <span style={{ fontSize: 10, color: CYAN, letterSpacing: "0.12em", fontFamily: "monospace" }} className="uppercase">
+            Live Demo
+          </span>
+        </div>
+
+        {/* Continent SVG */}
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice">
+          <ellipse cx="160" cy="160" rx="110" ry="90"  fill="#0f2d3d" stroke="rgba(34,211,238,0.15)" strokeWidth="1" />
+          <ellipse cx="190" cy="230" rx="60"  ry="50"  fill="#0f2d3d" stroke="rgba(34,211,238,0.15)" strokeWidth="1" />
+          <ellipse cx="230" cy="310" rx="60"  ry="90"  fill="#0f2d3d" stroke="rgba(34,211,238,0.15)" strokeWidth="1" />
+          <ellipse cx="420" cy="140" rx="55"  ry="45"  fill="#0f2d3d" stroke="rgba(34,211,238,0.15)" strokeWidth="1" />
+          <ellipse cx="420" cy="270" rx="65"  ry="90"  fill="#0f2d3d" stroke="rgba(34,211,238,0.15)" strokeWidth="1" />
+          <ellipse cx="590" cy="160" rx="130" ry="75"  fill="#0f2d3d" stroke="rgba(34,211,238,0.15)" strokeWidth="1" />
+          <ellipse cx="660" cy="330" rx="65"  ry="45"  fill="#0f2d3d" stroke="rgba(34,211,238,0.15)" strokeWidth="1" />
+          <ellipse cx="300" cy="80"  rx="45"  ry="35"  fill="#0a2030" stroke="rgba(34,211,238,0.1)"  strokeWidth="1" />
+
+          {/* Route line through chosen pins */}
+          {chosen.length > 1 && (
+            <path d={routeD} fill="none" stroke={CYAN} strokeWidth="1" strokeDasharray="5 5" opacity="0.4" />
+          )}
+
+          {/* All destinations — faint when unselected, glowing when selected */}
+          {DESTINATIONS.map((d) => {
+            const on = selected.includes(d.id);
+            return (
+              <g
+                key={d.id}
+                onClick={() => toggle(d.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    toggle(d.id);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={on}
+                aria-label={`${on ? "Remove" : "Add"} ${d.city}, ${d.country}`}
+                style={{ cursor: "pointer", outline: "none" }}
+              >
+                {/* Larger invisible hit area for easy tapping */}
+                <circle cx={d.x} cy={d.y} r={16} fill="transparent" />
+                {on ? (
+                  <GlowDot cx={d.x} cy={d.y} r={4} color="#f59e0b" />
+                ) : (
+                  <circle cx={d.x} cy={d.y} r={3.5} fill="rgba(34,211,238,0.25)" stroke={CYAN} strokeWidth="1" />
+                )}
+              </g>
+            );
+          })}
+        </svg>
+
+        {/* Stats overlay (live) */}
+        <div
+          className="absolute bottom-4 left-4 rounded-xl px-4 py-3"
+          style={{
+            background: "rgba(3,11,26,0.85)",
+            border: "1px solid rgba(34,211,238,0.2)",
+            backdropFilter: "blur(12px)",
+            boxShadow: "0 0 20px rgba(34,211,238,0.1)",
+          }}
+        >
+          <p style={{ fontSize: 10, color: CYAN, letterSpacing: "0.1em", fontFamily: "monospace" }} className="uppercase mb-2">
+            ∷ YOUR DEMO MAP
+          </p>
+          <div className="flex items-center gap-5" aria-live="polite">
+            {[[countries, "countries"], [cities, "cities"]].map(([n, l], i) => (
+              <div key={i} className="text-center">
+                <p style={{ fontFamily: "monospace", color: CYAN, fontSize: 22, fontWeight: 700, lineHeight: 1 }}>{n}</p>
+                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>{l}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Corner decoration */}
+        <div className="absolute top-3 right-3 opacity-50">
+          <div style={{ width: 16, height: 16, borderTop: `1.5px solid ${CYAN}`, borderRight: `1.5px solid ${CYAN}` }} />
+        </div>
+        <div className="absolute bottom-3 right-3 opacity-50">
+          <div style={{ width: 16, height: 16, borderBottom: `1.5px solid ${CYAN}`, borderRight: `1.5px solid ${CYAN}` }} />
         </div>
       </div>
 
-      {/* Corner decoration */}
-      <div className="absolute top-3 right-3 opacity-50">
-        <div style={{ width: 16, height: 16, borderTop: `1.5px solid ${CYAN}`, borderRight: `1.5px solid ${CYAN}` }} />
-      </div>
-      <div className="absolute bottom-3 left-3 opacity-50">
-        <div style={{ width: 16, height: 16, borderBottom: `1.5px solid ${CYAN}`, borderLeft: `1.5px solid ${CYAN}` }} />
+      {/* Destination chips */}
+      <div className="mt-4">
+        <p className="text-center text-xs mb-3" style={{ color: MUTED_LANDING }}>
+          Tap a destination to drop a pin — no account needed
+        </p>
+        <div className="flex flex-wrap justify-center gap-2">
+          {DESTINATIONS.map((d) => {
+            const on = selected.includes(d.id);
+            return (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => toggle(d.id)}
+                aria-pressed={on}
+                aria-label={`${on ? "Remove" : "Add"} ${d.city}, ${d.country}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+                style={{
+                  background: on ? "rgba(245,158,11,0.12)" : "rgba(255,255,255,0.04)",
+                  border: `1px solid ${on ? "rgba(245,158,11,0.5)" : "rgba(255,255,255,0.12)"}`,
+                  color: on ? "#fbbf24" : "rgba(255,255,255,0.6)",
+                }}
+              >
+                <MapPin className="w-3 h-3" />
+                {d.city}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -291,9 +374,9 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* Map */}
+        {/* Interactive demo */}
         <section className="pb-20">
-          <MapMockup />
+          <InteractiveDemo />
         </section>
 
         {/* Features */}
